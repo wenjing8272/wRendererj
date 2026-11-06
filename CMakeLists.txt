@@ -20,10 +20,14 @@ find_package(Vulkan REQUIRED)
  
 # 1. 先处理第三方库
 add_subdirectory(external/vk-bootstrap)
- 
+
+
 # 2. 再创建自己的目标
 add_executable(${PROJECT_NAME} 
     src/wRendererj.cpp
+    src/Window/WindowManger.cpp
+    src/RHI/Types.h
+    src/RHI/RenderContext.cpp
 )
 # 3. 最后给目标加配置
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
