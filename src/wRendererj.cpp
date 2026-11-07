@@ -9,12 +9,22 @@
 
 int main()
 {
-	wrj::RenderContext renderContext;
-	wrj::WindowManger windowManger(800, 600);
-	windowManger.createWindow();
-	while (true)
+	try {
+		bool swapchainDirty = false;
+		wrj::RenderContext renderContext;
+		wrj::WindowManger windowManger(800, 600);
+		windowManger.createWindow();
+		renderContext.initRenderContext(windowManger.getNativeResources(), windowManger.getRequiredInstanceExtensions());
+		while (!windowManger.windowShouldClose())
+		{
+			windowManger.closeWindowEvent();
+			windowManger.pollEvents();
+		}
+	}
+	catch (const std::exception& e)
 	{
-
+		std::cerr << "Exception: " << e.what() << std::endl;
+		return -1;
 	}
     return 0;
 }

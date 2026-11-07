@@ -10,11 +10,10 @@ namespace wrj {
 	}
 	WindowManger::~WindowManger()
 	{
-		if (m_window)
-		{
-			glfwDestroyWindow(m_window);
-		}
+		if (m_window)glfwDestroyWindow(m_window);
+		glfwTerminate();
 	}
+	//初始化窗口，传递给 Vulkan 的原生资源和扩展列表必须在窗口创建之后才能获取
 	void WindowManger::createWindow()
 	{
 		if (!glfwInit())
@@ -29,6 +28,8 @@ namespace wrj {
 		{
 			throw std::runtime_error("Failed to create GLFW window");
 		}
+		glfwSetWindowUserPointer(m_window, this);
+		glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
 	}
 	const NativeResources WindowManger::getNativeResources() const
 	{
@@ -59,5 +60,28 @@ namespace wrj {
 		}
 		std::vector<std::string> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 		return extensions;
+	}
+	void WindowManger::closeWindowEvent()
+	{
+		if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		{
+			glfwSetWindowShouldClose(m_window, true);
+		}
+	}
+	const bool WindowManger::windowShouldClose() const
+	{
+		return glfwWindowShouldClose(m_window);
+	}
+	void WindowManger::pollEvents() const
+	{
+		glfwPollEvents();
+	}
+	void WindowManger::framebufferResizeCallback(GLFWwindow* window, int width, int height)
+	{
+		auto windowManger = reinterpret_cast<WindowManger*>(glfwGetWindowUserPointer(window));
+		if (windowManger)
+		{
+			windowManger->m_framebufferResized = true;
+		}
 	}
 }

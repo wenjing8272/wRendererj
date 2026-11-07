@@ -28,7 +28,15 @@ add_executable(${PROJECT_NAME}
     src/Window/WindowManger.cpp
     src/RHI/Types.h
     src/RHI/RenderContext.cpp
+    src/RHI/FrameSync.cpp
 )
+# 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
+# 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，
+# 导致下一行被并入注释（头文件 include、函数签名凭空消失）。必须显式指定 /utf-8。
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+endif()
+
 # 3. 最后给目标加配置
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/external/VMA

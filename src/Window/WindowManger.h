@@ -19,10 +19,16 @@ namespace wrj {
 		void createWindow();
 		const NativeResources getNativeResources()const;
 		const std::vector<std::string> getRequiredInstanceExtensions()const;
+		void closeWindowEvent();
+		const bool windowShouldClose()const;
+		void pollEvents()const;
 	private:
+		static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 		std::uint32_t m_width{ 0 };
 		std::uint32_t m_height{ 0 };
 		bool m_isWindowCreated{ false };
 		GLFWwindow* m_window{ nullptr };
+
+		bool m_framebufferResized{ false };
 	};
 }
