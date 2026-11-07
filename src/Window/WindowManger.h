@@ -22,6 +22,8 @@ namespace wrj {
 		void closeWindowEvent();
 		const bool windowShouldClose()const;
 		void pollEvents()const;
+		const bool consumeFramebufferResized();
+		void waitEvents()const;
 	private:
 		static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 		std::uint32_t m_width{ 0 };

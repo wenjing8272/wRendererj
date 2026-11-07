@@ -76,6 +76,16 @@ namespace wrj {
 	{
 		glfwPollEvents();
 	}
+	const bool WindowManger::consumeFramebufferResized()
+	{
+		bool isResized = m_framebufferResized;
+		m_framebufferResized = false;
+		return isResized;
+	}
+	void WindowManger::waitEvents() const
+	{
+		glfwWaitEvents();
+	}
 	void WindowManger::framebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		auto windowManger = reinterpret_cast<WindowManger*>(glfwGetWindowUserPointer(window));

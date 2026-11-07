@@ -19,6 +19,22 @@ int main()
 		{
 			windowManger.closeWindowEvent();
 			windowManger.pollEvents();
+			if (swapchainDirty || windowManger.consumeFramebufferResized())
+			{
+				auto native = windowManger.getNativeResources();
+				while (native.frameBufferWidth == 0 || native.frameBufferHeight == 0)
+				{
+					windowManger.waitEvents();
+					if (windowManger.windowShouldClose())
+					{
+						return 0;
+					}
+					native = windowManger.getNativeResources();
+				}
+				renderContext.recreateSwapchain({ native.frameBufferWidth,native.frameBufferHeight });
+				swapchainDirty = false;
+			}
+
 		}
 	}
 	catch (const std::exception& e)

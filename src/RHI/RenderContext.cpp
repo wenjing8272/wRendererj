@@ -167,18 +167,23 @@ namespace wrj {
 	}
 	void RenderContext::recreateSwapchain(std::pair<uint32_t, uint32_t> extent)
 	{
-		// 销毁旧的 image views
+		vkQueueWaitIdle(m_graphicsQueue);
+		// 记录旧的交换链，销毁旧的 image views
+		VkSwapchainKHR oldSwapchain = m_swapchain;
 		m_swapchain.destroy_image_views(m_swapchainImageViews);
+		m_swapchainImages.clear();
 		// 创建新的交换链
 		auto swapchainResult = vkb::SwapchainBuilder(m_device)
 			.set_desired_extent(extent.first, extent.second)
-			.set_old_swapchain(m_swapchain)
+			.set_old_swapchain(oldSwapchain)
 			.build();
 		if (!swapchainResult)
 		{
 			throw std::runtime_error("Failed to recreate swapchain: " + swapchainResult.error().message());
 		}
 		m_swapchain = swapchainResult.value();
+		//清理旧交换链
+		vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
 		// 获取新的交换链图像
 		auto swapchainImagesResult = m_swapchain.get_images();
 		if (!swapchainImagesResult)
