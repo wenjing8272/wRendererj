@@ -10,8 +10,18 @@ namespace wrj {
 		std::uint32_t frameIndex{ 0 };
 		std::uint32_t imageIndex{ 0 };
 		std::uint64_t signalValue{ 0 };
-		VkSemaphore imageAvailable = VK_NULL_HANDLE;
-		VkSemaphore renderFinished = VK_NULL_HANDLE;
-		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+		VkSemaphore imageAvailable{ VK_NULL_HANDLE };
+		VkSemaphore renderFinished{ VK_NULL_HANDLE };
+		VkCommandBuffer commandBuffer{ VK_NULL_HANDLE };
+	};
+
+	struct transitionInfomation
+	{
+		VkImageLayout oldLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+		VkImageLayout newLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+		VkAccessFlags srcAccessMask{};
+		VkAccessFlags dstAccessMask{};
+		VkPipelineStageFlags srcPipelineMask{};
+		VkPipelineStageFlags dstPipelineMask{};
 	};
 }

@@ -5,7 +5,7 @@
 namespace wrj {
 	FrameSync::~FrameSync()
 	{
-		if (m_device == VK_NULL_HANDLE)return;
+		vkDeviceWaitIdle(m_device);
 		for (auto& renderFinished : m_renderFinishedSemaphores)
 		{
 			if (renderFinished != VK_NULL_HANDLE)vkDestroySemaphore(m_device, renderFinished, nullptr);
@@ -77,12 +77,73 @@ namespace wrj {
 	}
 	bool FrameSync::frameEnd(const FrameResources& frame, VkSwapchainKHR swapchain)
 	{
+		VkSemaphoreSubmitInfo waitInfo{};
+		waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		waitInfo.semaphore = frame.imageAvailable;
+		waitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
+		VkCommandBufferSubmitInfo commandInfo{};
+		commandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+		commandInfo.commandBuffer = frame.commandBuffer;
+
+		VkSemaphoreSubmitInfo signalTimelineInfo{};
+		signalTimelineInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		signalTimelineInfo.semaphore = m_graphicsSemaphore;
+		signalTimelineInfo.value = frame.signalValue;
+		signalTimelineInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+		VkSemaphoreSubmitInfo signalPresentInfo{};
+		signalPresentInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		signalPresentInfo.semaphore = frame.renderFinished;
+		signalPresentInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+		std::array<VkSemaphoreSubmitInfo, 2> submitInfos{  signalTimelineInfo, signalPresentInfo };
+		VkSubmitInfo2 submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+		submitInfo.waitSemaphoreInfoCount = 1;
+		submitInfo.commandBufferInfoCount = 1;
+		submitInfo.pCommandBufferInfos = &commandInfo;
+		submitInfo.pWaitSemaphoreInfos = &waitInfo;
+		submitInfo.signalSemaphoreInfoCount = static_cast<std::uint32_t>(submitInfos.size());
+		submitInfo.pSignalSemaphoreInfos = submitInfos.data();
+
+		vkQueueSubmit2(m_graphicsQueue,1, &submitInfo, VK_NULL_HANDLE);
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.pImageIndices = &frame.imageIndex;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &swapchain;
+		presentInfo.pWaitSemaphores = &frame.renderFinished;
+		presentInfo.waitSemaphoreCount = 1;
+		const auto result = vkQueuePresentKHR(m_graphicsQueue, &presentInfo);
+
+		return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
+	}
+	void FrameSync::recreateRenderingFinishedSemaphore(std::uint32_t swapchainTotal)
+	{
+		for (auto renderingFinished : m_renderFinishedSemaphores)
+		{
+			if (renderingFinished != VK_NULL_HANDLE)vkDestroySemaphore(m_device, renderingFinished, nullptr);
+		}
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		m_renderFinishedSemaphores.assign(swapchainTotal, VK_NULL_HANDLE);
+		for (auto& renderingFinished : m_renderFinishedSemaphores)
+		{
+			if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &renderingFinished) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to recreate render finished semaphore");
+			}
+		}
+		m_swapchainTotal = swapchainTotal;
 	}
 	const bool FrameSync::waitTimeline(std::uint64_t value)const
 	{
 		std::uint64_t v = value;
 		VkSemaphoreWaitInfo waitInfo{};
+		waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 		waitInfo.semaphoreCount = 1;
 		waitInfo.pSemaphores = &m_graphicsSemaphore;
 		waitInfo.pValues = &v;

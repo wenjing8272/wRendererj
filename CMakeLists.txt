@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
     src/RHI/Types.h
     src/RHI/RenderContext.cpp
     src/RHI/FrameSync.cpp
+    src/RHI/CommandList.cpp
 )
 # 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
 # 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，

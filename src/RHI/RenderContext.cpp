@@ -8,6 +8,7 @@
 // 上面的宏必须先于这个包含，vulkan.h 才会再引入 vulkan_win32.h。
 #include"RenderContext.h"
 #include"FrameSync.h"
+#include"CommandList.h"
 
 #include<iostream>
 
@@ -20,6 +21,7 @@ namespace wrj {
 	RenderContext::~RenderContext()
 	{
 		m_frameSync.reset();
+		m_commandList.reset();
 		m_swapchain.destroy_image_views(m_swapchainImageViews);
 		vkb::destroy_swapchain(m_swapchain);
 		vkb::destroy_device(m_device);
@@ -129,7 +131,8 @@ namespace wrj {
 			throw std::runtime_error("Failed to get swapchain images: " + swapchainImagesResult.error().message());
 		}
 		m_swapchainImages = swapchainImagesResult.value();
-
+		
+		m_swapchainArea = { {0,0},{native.frameBufferWidth,native.frameBufferHeight} };
 		// ---------- 7. 创建图像视图 ----------
 		// 上面的 image 不同，VkImageView 是我们通过 vkCreateImageView 创建的，
 		// 所有权在我们手里：必须在销毁 swapchain 之前用
@@ -147,6 +150,7 @@ namespace wrj {
 			throw std::runtime_error("Failed to get graphics queue: " + graphicsQueueResult.error().message());
 		}
 		m_graphicsQueue = graphicsQueueResult.value();
+		m_graphicsQueueFamlily = m_device.get_queue_index(vkb::QueueType::graphics).value();
 		//transfer queue
 		auto transferQueueResult = m_device.get_queue(vkb::QueueType::transfer);
 		if (!transferQueueResult)
@@ -154,6 +158,7 @@ namespace wrj {
 			throw std::runtime_error("Failed to get transfer queue: " + transferQueueResult.error().message());
 		}
 		m_transferQueue = transferQueueResult.value();
+		m_transferQueueFamlily = m_device.get_queue_index(vkb::QueueType::transfer).value();
 		//compute queue
 		auto computeQueueResult = m_device.get_queue(vkb::QueueType::compute);
 		if (!computeQueueResult)
@@ -161,11 +166,16 @@ namespace wrj {
 			throw std::runtime_error("Failed to get compute queue: " + computeQueueResult.error().message());
 		}
 		m_computeQueue = computeQueueResult.value();
+		m_computeQueueFamlily = m_device.get_queue_index(vkb::QueueType::compute).value();
 
 		m_frameSync = std::make_unique<FrameSync>();
 		m_frameSync->initFrameSync(m_device, m_graphicsQueue,static_cast<std::uint32_t>(m_swapchainImages.size()));
+
+		m_commandList = std::make_unique<CommandList>();
+		m_commandList->initCommandList(m_device, m_graphicsQueueFamlily);
+		m_commandList->createCommandBuffers();
 	}
-	void RenderContext::recreateSwapchain(std::pair<uint32_t, uint32_t> extent)
+	void RenderContext::recreateSwapchain(Extent2D extent)
 	{
 		vkQueueWaitIdle(m_graphicsQueue);
 		// 记录旧的交换链，销毁旧的 image views
@@ -174,7 +184,7 @@ namespace wrj {
 		m_swapchainImages.clear();
 		// 创建新的交换链
 		auto swapchainResult = vkb::SwapchainBuilder(m_device)
-			.set_desired_extent(extent.first, extent.second)
+			.set_desired_extent(extent.width, extent.height)
 			.set_old_swapchain(oldSwapchain)
 			.build();
 		if (!swapchainResult)
@@ -191,6 +201,7 @@ namespace wrj {
 			throw std::runtime_error("Failed to get swapchain images: " + swapchainImagesResult.error().message());
 		}
 		m_swapchainImages = swapchainImagesResult.value();
+		m_swapchainArea.extent = { extent.width, extent.height };
 		// 创建新的图像视图
 		auto swapchainImageViewsResult = m_swapchain.get_image_views();
 		if (!swapchainImageViewsResult)
@@ -198,5 +209,32 @@ namespace wrj {
 			throw std::runtime_error("Failed to get swapchain image views: " + swapchainImageViewsResult.error().message());
 		}
 		m_swapchainImageViews = swapchainImageViewsResult.value();
+	}
+	void RenderContext::begin(bool& swapchainDirty)
+	{
+		m_currentFrame = m_frameSync->frameBegin(m_swapchain);
+		if (!m_currentFrame.has_value())
+		{
+			swapchainDirty = true;
+			return;
+		}
+	}
+	void RenderContext::beginRendering()
+	{
+		m_commandList->beginCommandBuffer(m_currentFrame->frameIndex);
+		m_commandList->recordCommand(m_currentFrame->frameIndex,m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
+	}
+	void RenderContext::endRendering()
+	{
+		auto commandBuffer = m_commandList->endCommandBuffer(m_currentFrame->frameIndex);
+		m_currentFrame->commandBuffer = commandBuffer;
+	}
+	void RenderContext::end(bool& swapchainDirty)
+	{
+		if (!m_frameSync->frameEnd(m_currentFrame.value(), m_swapchain))
+		{
+			swapchainDirty = true;
+			return;
+		}
 	}
 }

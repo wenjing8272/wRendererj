@@ -11,8 +11,8 @@ int main()
 {
 	try {
 		bool swapchainDirty = false;
-		wrj::RenderContext renderContext;
 		wrj::WindowManger windowManger(800, 600);
+		wrj::RenderContext renderContext;
 		windowManger.createWindow();
 		renderContext.initRenderContext(windowManger.getNativeResources(), windowManger.getRequiredInstanceExtensions());
 		while (!windowManger.windowShouldClose())
@@ -21,20 +21,26 @@ int main()
 			windowManger.pollEvents();
 			if (swapchainDirty || windowManger.consumeFramebufferResized())
 			{
-				auto native = windowManger.getNativeResources();
-				while (native.frameBufferWidth == 0 || native.frameBufferHeight == 0)
+				auto framebufferSize = windowManger.getFramebufferSize();
+				while (framebufferSize.width == 0 || framebufferSize.height == 0)
 				{
 					windowManger.waitEvents();
 					if (windowManger.windowShouldClose())
 					{
 						return 0;
 					}
-					native = windowManger.getNativeResources();
+					framebufferSize = windowManger.getFramebufferSize();
 				}
-				renderContext.recreateSwapchain({ native.frameBufferWidth,native.frameBufferHeight });
+				std::cout << "recreate swapchain" << std::endl;
+				renderContext.recreateSwapchain({ framebufferSize.width, framebufferSize.height });
 				swapchainDirty = false;
 			}
-
+			renderContext.begin(swapchainDirty);
+			if (swapchainDirty)continue;
+			renderContext.beginRendering();
+			renderContext.endRendering();
+			renderContext.end(swapchainDirty);
+			if (swapchainDirty)continue;
 		}
 	}
 	catch (const std::exception& e)

@@ -22,6 +22,7 @@ namespace wrj {
 		void closeWindowEvent();
 		const bool windowShouldClose()const;
 		void pollEvents()const;
+		const Extent2D getFramebufferSize()const;
 		const bool consumeFramebufferResized();
 		void waitEvents()const;
 	private:

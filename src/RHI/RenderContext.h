@@ -1,4 +1,5 @@
 #pragma once
+#include"RenderConfig.h"
 #include"Types.h"
 #include<VkBootstrap.h>
 #include<vulkan/vulkan.h>
@@ -6,9 +7,13 @@
 #include<string>
 #include<vector>
 #include<memory>
+#include<array>
+#include<optional>
 
 namespace wrj {
 	class FrameSync;
+
+	class CommandList;
 
 	class RenderContext {
 	public:
@@ -19,8 +24,12 @@ namespace wrj {
 		RenderContext(RenderContext&& otherRenderContext) = delete;
 		RenderContext& operator=(RenderContext&& otherRenderContext) = delete;
 		void initRenderContext(const NativeResources& native,const std::vector<std::string>& instanceExtensions);
-		void recreateSwapchain(std::pair<uint32_t, uint32_t> extent);
+		void recreateSwapchain(Extent2D extent);
 
+		void begin(bool& swapchainDirty);
+		void beginRendering();
+		void endRendering();
+		void end(bool& swapchainDirty);
 	private:
 		vkb::Instance m_instance;
 		// 必须初始化为空句柄：initRenderContext 中途失败时析构函数仍会执行销毁逻辑
@@ -32,11 +41,18 @@ namespace wrj {
 		std::vector<VkImage> m_swapchainImages;
 		// 这些 VkImageView 由我们创建，必须在销毁交换链之前释放
 		std::vector<VkImageView> m_swapchainImageViews;
+		Area2D m_swapchainArea;
 
+		std::uint32_t m_graphicsQueueFamlily{ 0 };
+		std::uint32_t m_computeQueueFamlily{ 0 };
+		std::uint32_t m_transferQueueFamlily{ 0 };
 		VkQueue m_graphicsQueue = VK_NULL_HANDLE;
 		VkQueue m_transferQueue = VK_NULL_HANDLE;
 		VkQueue m_computeQueue = VK_NULL_HANDLE;
 
 		std::unique_ptr<FrameSync> m_frameSync = nullptr;
+		std::optional<FrameResources> m_currentFrame;
+
+		std::unique_ptr<CommandList> m_commandList = nullptr;
 	};
 }

@@ -21,8 +21,8 @@ namespace wrj {
 			throw std::runtime_error("Failed to initialize GLFW");
 		}
 		m_isWindowCreated = true;
-		glfwInitHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwInitHint(GLFW_RESIZABLE, GLFW_TRUE);
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 		m_window = glfwCreateWindow(m_width, m_height, "wRendererj", nullptr, nullptr);
 		if (m_window == nullptr)
 		{
@@ -75,6 +75,12 @@ namespace wrj {
 	void WindowManger::pollEvents() const
 	{
 		glfwPollEvents();
+	}
+	const Extent2D WindowManger::getFramebufferSize() const
+	{
+		int width, height;
+		glfwGetFramebufferSize(m_window, &width, &height);
+		return { static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height) };
 	}
 	const bool WindowManger::consumeFramebufferResized()
 	{

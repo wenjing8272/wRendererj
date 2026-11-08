@@ -18,6 +18,7 @@ namespace wrj {
 		void initFrameSync(VkDevice device,VkQueue graphicsQueue,std::uint32_t swapchainTotal);
 		std::optional<FrameResources> frameBegin(VkSwapchainKHR swapchain);
 		bool frameEnd(const FrameResources& frame, VkSwapchainKHR swapchain);
+		void recreateRenderingFinishedSemaphore(std::uint32_t swapchainTotal);
 	private:
 		const bool waitTimeline(std::uint64_t value)const;
 		struct Slot
