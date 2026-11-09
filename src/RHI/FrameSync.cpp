@@ -118,6 +118,8 @@ namespace wrj {
 		presentInfo.waitSemaphoreCount = 1;
 		const auto result = vkQueuePresentKHR(m_graphicsQueue, &presentInfo);
 
+		m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+
 		return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
 	}
 	void FrameSync::recreateRenderingFinishedSemaphore(std::uint32_t swapchainTotal)

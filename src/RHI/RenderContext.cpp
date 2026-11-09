@@ -20,8 +20,15 @@ namespace wrj {
 	// 销毁 swapchain 时自动释放
 	RenderContext::~RenderContext()
 	{
+		vkDeviceWaitIdle(m_device);
 		m_frameSync.reset();
-		m_commandList.reset();
+		for (auto& commandList : m_commandLists)
+		{
+			commandList.reset();
+		}
+		vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+		vkDestroyCommandPool(m_device, m_transferPool, nullptr);
+		vkDestroyCommandPool(m_device,m_computePool, nullptr);
 		m_swapchain.destroy_image_views(m_swapchainImageViews);
 		vkb::destroy_swapchain(m_swapchain);
 		vkb::destroy_device(m_device);
@@ -30,6 +37,34 @@ namespace wrj {
 	}
 
 	void RenderContext::initRenderContext(const NativeResources& native,const std::vector<std::string>& instanceExtensions)
+	{
+		initDevice(native, instanceExtensions);
+
+		m_frameSync = std::make_unique<FrameSync>();
+		m_frameSync->initFrameSync(m_device, m_graphicsQueue, static_cast<std::uint32_t>(m_swapchainImages.size()));
+
+		std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> buffers{};
+
+		VkCommandBufferAllocateInfo commandBufferInfo{};
+		commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+		commandBufferInfo.commandPool = m_commandPool;
+		commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		if (vkAllocateCommandBuffers(m_device, &commandBufferInfo, buffers.data()) != VK_SUCCESS)
+		{
+			throw std::runtime_error("vkAllocateCommandBuffers failed");
+		}
+
+		m_commandLists.resize(MAX_FRAMES_IN_FLIGHT);
+		for (size_t i = 0;i < MAX_FRAMES_IN_FLIGHT;++i)
+		{
+			m_commandLists[i] = std::make_unique<CommandList>();
+			m_commandLists[i]->initCommandList(m_device, m_graphicsQueueFamlily, buffers[i]);
+		}
+	}
+
+	void RenderContext::initDevice(const NativeResources& native,const std::vector<std::string>& instanceExtensions)
 	{
 		// ---------- 1. 创建 VkInstance ----------
 		// Instance 是整个 Vulkan 上下文的根对象，surface、physical device、device
@@ -111,6 +146,15 @@ namespace wrj {
 		}
 		m_device = deviceResult.value();
 
+		VmaAllocatorCreateInfo allocatorInfo{};
+		allocatorInfo.instance = m_instance;
+		allocatorInfo.physicalDevice = m_physicalDevice;
+		allocatorInfo.device = m_device;
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+		if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS) {
+			throw std::runtime_error("vmaCreateAllocator failed");
+		}
+
 		// ---------- 5. 创建交换链 ----------
 		// SwapchainBuilder 从 Device 里取出 surface 和队列信息，默认选择 surface
 		// 支持的格式、颜色空间和 present mode。窗口尺寸变化时需要重建：
@@ -151,6 +195,17 @@ namespace wrj {
 		}
 		m_graphicsQueue = graphicsQueueResult.value();
 		m_graphicsQueueFamlily = m_device.get_queue_index(vkb::QueueType::graphics).value();
+
+		VkCommandPoolCreateInfo commandPoolInfo{};
+		commandPoolInfo.queueFamilyIndex = m_graphicsQueueFamlily;
+		commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+		if (vkCreateCommandPool(m_device, &commandPoolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create graphic command pool");
+		}
+
 		//transfer queue
 		auto transferQueueResult = m_device.get_queue(vkb::QueueType::transfer);
 		if (!transferQueueResult)
@@ -159,6 +214,17 @@ namespace wrj {
 		}
 		m_transferQueue = transferQueueResult.value();
 		m_transferQueueFamlily = m_device.get_queue_index(vkb::QueueType::transfer).value();
+
+		VkCommandPoolCreateInfo transferInfo{};
+		transferInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		transferInfo.queueFamilyIndex = m_transferQueueFamlily;
+		transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+		if (vkCreateCommandPool(m_device, &transferInfo, nullptr, &m_transferPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create transfer command pool");
+		}
+
 		//compute queue
 		auto computeQueueResult = m_device.get_queue(vkb::QueueType::compute);
 		if (!computeQueueResult)
@@ -168,12 +234,15 @@ namespace wrj {
 		m_computeQueue = computeQueueResult.value();
 		m_computeQueueFamlily = m_device.get_queue_index(vkb::QueueType::compute).value();
 
-		m_frameSync = std::make_unique<FrameSync>();
-		m_frameSync->initFrameSync(m_device, m_graphicsQueue,static_cast<std::uint32_t>(m_swapchainImages.size()));
+		VkCommandPoolCreateInfo computeInfo{};
+		computeInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		computeInfo.queueFamilyIndex = m_computeQueueFamlily;
+		computeInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
-		m_commandList = std::make_unique<CommandList>();
-		m_commandList->initCommandList(m_device, m_graphicsQueueFamlily);
-		m_commandList->createCommandBuffers();
+		if (vkCreateCommandPool(m_device, &commandPoolInfo, nullptr, &m_computePool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create compute command pool");
+		}
 	}
 	void RenderContext::recreateSwapchain(Extent2D extent)
 	{
@@ -209,6 +278,8 @@ namespace wrj {
 			throw std::runtime_error("Failed to get swapchain image views: " + swapchainImageViewsResult.error().message());
 		}
 		m_swapchainImageViews = swapchainImageViewsResult.value();
+
+		m_frameSync->recreateRenderingFinishedSemaphore(static_cast<std::uint32_t>(m_swapchainImages.size()));
 	}
 	void RenderContext::begin(bool& swapchainDirty)
 	{
@@ -221,12 +292,12 @@ namespace wrj {
 	}
 	void RenderContext::beginRendering()
 	{
-		m_commandList->beginCommandBuffer(m_currentFrame->frameIndex);
-		m_commandList->recordCommand(m_currentFrame->frameIndex,m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
+		m_commandLists[m_currentFrame->frameIndex]->beginCommandBuffer();
+		m_commandLists[m_currentFrame->frameIndex]->recordCommand(m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
 	}
 	void RenderContext::endRendering()
 	{
-		auto commandBuffer = m_commandList->endCommandBuffer(m_currentFrame->frameIndex);
+		auto commandBuffer = m_commandLists[m_currentFrame->frameIndex]->endCommandBuffer();
 		m_currentFrame->commandBuffer = commandBuffer;
 	}
 	void RenderContext::end(bool& swapchainDirty)

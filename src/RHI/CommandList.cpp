@@ -4,42 +4,24 @@ namespace wrj {
 	CommandList::CommandList() = default;
 	CommandList::~CommandList()
 	{
-		vkDeviceWaitIdle(m_device);
-		if (m_commandPool != VK_NULL_HANDLE)
-		{
-			vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-		}
+
 	}
-	void CommandList::initCommandList(VkDevice device, std::uint32_t graphicsQueueFamlily)
+	void CommandList::initCommandList(VkDevice device, std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer)
 	{
 		m_device = device;
 		m_graphicsQueueFamlily = graphicsQueueFamlily;
-		VkCommandPoolCreateInfo commandPoolCreateInfo{};
-		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		commandPoolCreateInfo.queueFamilyIndex = m_graphicsQueueFamlily;
-
-		vkCreateCommandPool(m_device, &commandPoolCreateInfo, nullptr, &m_commandPool);
+		m_commandBuffer = commandBuffer;
 	}
-	void CommandList::createCommandBuffers()
+	void CommandList::beginCommandBuffer()
 	{
-		VkCommandBufferAllocateInfo commandBufferAllocateInfo{};
-		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		commandBufferAllocateInfo.commandPool = m_commandPool;
-		commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		commandBufferAllocateInfo.commandBufferCount = static_cast<std::uint32_t>(m_commandBuffers.size());
-		vkAllocateCommandBuffers(m_device, &commandBufferAllocateInfo, m_commandBuffers.data());
-	}
-	void CommandList::beginCommandBuffer(std::uint32_t frameIndex)
-	{
-		vkResetCommandBuffer(m_commandBuffers[frameIndex], 0);
+		vkResetCommandBuffer(m_commandBuffer, 0);
 		VkCommandBufferBeginInfo commandBufferBeginInfo{};
 		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		vkBeginCommandBuffer(m_commandBuffers[frameIndex], &commandBufferBeginInfo);
+		vkBeginCommandBuffer(m_commandBuffer, &commandBufferBeginInfo);
 	}
-	void CommandList::recordCommand(std::uint32_t frameIndex, VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
+	void CommandList::recordCommand( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
 	{
-		transitionBufferRecord(frameIndex, swapchainImage, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
 		
@@ -61,21 +43,21 @@ namespace wrj {
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAttachment;
 
-		vkCmdBeginRendering(m_commandBuffers[frameIndex], &renderingInfo);
+		vkCmdBeginRendering(m_commandBuffer, &renderingInfo);
 		
-		vkCmdEndRendering(m_commandBuffers[frameIndex]);
+		vkCmdEndRendering(m_commandBuffer);
 
-		transitionBufferRecord(frameIndex, swapchainImage, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
 			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
 
 	}
-	VkCommandBuffer CommandList::endCommandBuffer(std::uint32_t frameIndex)
+	VkCommandBuffer CommandList::endCommandBuffer()
 	{
-		vkEndCommandBuffer(m_commandBuffers[frameIndex]);
-		return m_commandBuffers[frameIndex];
+		vkEndCommandBuffer(m_commandBuffer);
+		return m_commandBuffer;
 	}
-	void CommandList::transitionBufferRecord(std::uint32_t frameIndex,VkImage buffer,const transitionInfomation& transInfo)
+	void CommandList::transitionBufferRecord(VkImage buffer,const transitionInfomation& transInfo)
 	{
 		VkImageMemoryBarrier2 barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -99,6 +81,6 @@ namespace wrj {
 		dependencyInfo.imageMemoryBarrierCount = 1;
 		dependencyInfo.pImageMemoryBarriers = &barrier;
 
-		vkCmdPipelineBarrier2(m_commandBuffers[frameIndex], &dependencyInfo);
+		vkCmdPipelineBarrier2(m_commandBuffer, &dependencyInfo);
 	}
 }
