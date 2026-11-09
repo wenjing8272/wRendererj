@@ -19,5 +19,7 @@ namespace wrj {
 		VkPhysicalDevice m_physicalDevice;
 		VkCommandPool m_commandPool;
 		VkQueue m_graphicsQueue;
+
+		
 	};
 }

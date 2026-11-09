@@ -2,6 +2,7 @@
 
 #include<cstdint>
 #include<vector>
+#include<limits>
 
 namespace wrj {
 
@@ -45,7 +46,7 @@ namespace wrj {
 		B8G8R8A8_SRGB,
 		R16G16B16A16_SFloat,
 		R8G8_UNorm,
-		D32_SFloat,
+		D32_SFloat
 	};
 	enum class BufferUsage:std::uint32_t
 	{
@@ -55,7 +56,7 @@ namespace wrj {
 		UniformBuffer = 1u << 2,
 		StorageBuffer = 1u << 3,
 		TransferSrc = 1u << 4,
-		TransferDst = 1u << 5,
+		TransferDst = 1u << 5
 	};
 	constexpr BufferUsage operator|(BufferUsage a, BufferUsage b)
 	{
@@ -91,4 +92,102 @@ namespace wrj {
 	{
 		return (value & flag) != TextureUsage::None;
 	}
+
+	enum class ShaderStage :std::uint32_t
+	{
+		None = 0,
+		Vertex = 1u << 0,
+		Fragment = 1u << 1,
+		Compute = 1u << 2
+	};
+	constexpr ShaderStage operator|(ShaderStage a, ShaderStage b)
+	{
+		return static_cast<ShaderStage>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+	}
+	constexpr ShaderStage operator&(ShaderStage a, ShaderStage b)
+	{
+		return static_cast<ShaderStage>(static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b));
+	}
+	constexpr bool isFlag(ShaderStage value, ShaderStage flag)
+	{
+		return (value & flag) != ShaderStage::None;
+	}
+	enum class VertexFormat {
+		Float,
+		Float2,
+		Float3,
+		Float4,
+		UInt32
+	};
+
+	enum class PrimitiveTopology {
+		TriangleList,
+		TriangleStrip
+	};
+
+	enum class CullMode {
+		None,
+		Front,
+		Back
+	};
+
+	enum class FrontFace {
+		CounterClockwise,
+		Clockwise
+	};
+
+	enum class CompareOp {
+		Never,
+		Less,
+		LessOrEqual,
+		Always
+	};
+
+	enum class IndexType {
+		UInt16,
+		UInt32
+	};
+
+	constexpr std::uint32_t vaildValue = UINT32_MAX;
+	struct VertexBinding
+	{
+		std::uint32_t binding{ UINT32_MAX };
+		std::uint32_t stride{ UINT32_MAX };
+		bool isPerInstance{ false };
+		
+		constexpr bool isVaild()const
+		{
+			return binding != vaildValue && stride != vaildValue && stride == 0;
+		}
+	};
+
+	struct VertexAttribute
+	{
+		std::uint32_t location{ UINT32_MAX };
+		std::uint32_t binding{ UINT32_MAX };
+		Format format{ Format::Undefined };
+		std::uint32_t offset{ UINT32_MAX };
+
+		constexpr bool isVaild()const
+		{
+			return location != vaildValue && binding != vaildValue && format != Format::Undefined && offset != vaildValue;
+		}
+	};
+
+	struct PushConstantRange
+	{
+		ShaderStage stage = ShaderStage::Vertex | ShaderStage::Fragment;
+		std::uint32_t offset{ UINT32_MAX };
+		std::uint32_t size{ UINT32_MAX };
+
+		constexpr bool isVaild()const
+		{
+			return stage != ShaderStage::None && offset != vaildValue && size != vaildValue;
+		}
+	};
+
+	struct GraphicsPipeline
+	{
+
+	};
 }

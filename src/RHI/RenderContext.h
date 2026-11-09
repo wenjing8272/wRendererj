@@ -27,6 +27,9 @@ namespace wrj {
 		void initRenderContext(const NativeResources& native,const std::vector<std::string>& instanceExtensions);
 		void recreateSwapchain(Extent2D extent);
 
+		void createBuffer();
+		void createImage();
+
 		void begin(bool& swapchainDirty);
 		void beginRendering();
 		void endRendering();
