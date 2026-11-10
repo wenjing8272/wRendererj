@@ -11,10 +11,16 @@ int main()
 {
 	try {
 		bool swapchainDirty = false;
-		wrj::WindowManger windowManger(800, 600);
+		wrj::WindowManger windowManger(1920, 1080);
 		wrj::RenderContext renderContext;
 		windowManger.createWindow();
-		renderContext.initRenderContext(windowManger.getNativeResources(), windowManger.getRequiredInstanceExtensions());
+		auto initFramebufferSize = windowManger.getFramebufferSize();
+		wrj::InitResource initRes{};
+		initRes.native = windowManger.getNativeResources();
+		initRes.frameBufferWidth = initFramebufferSize.width;
+		initRes.frameBufferHeight = initFramebufferSize.height;
+		initRes.appName = " wRenderj";
+		renderContext.initRenderContext(initRes, windowManger.getRequiredInstanceExtensions());
 		while (!windowManger.windowShouldClose())
 		{
 			windowManger.closeWindowEvent();

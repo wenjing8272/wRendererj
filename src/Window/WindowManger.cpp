@@ -40,10 +40,6 @@ namespace wrj {
 		NativeResources native;
 		native.display = GetModuleHandle(nullptr);
 		native.window = glfwGetWin32Window(m_window);
-		int width, height;
-		glfwGetFramebufferSize(m_window, &width, &height);
-		native.frameBufferWidth = static_cast<std::uint32_t>(width);
-		native.frameBufferHeight = static_cast<std::uint32_t>(height);
 		return native;
 	}
 	const std::vector<std::string> WindowManger::getRequiredInstanceExtensions() const

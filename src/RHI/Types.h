@@ -25,9 +25,16 @@ namespace wrj {
 	{
 		void* display{ nullptr };
 		void* window{ nullptr };
+	};
+
+	struct InitResource
+	{
+		NativeResources native{};
 		std::uint32_t frameBufferWidth{ 0 };
 		std::uint32_t frameBufferHeight{ 0 };
+		const char* appName = "wRenderj";
 	};
+
 	struct Viewport
 	{
 		float x{ 0.0f };
@@ -149,6 +156,23 @@ namespace wrj {
 	};
 
 	constexpr std::uint32_t vaildValue = UINT32_MAX;
+
+	template<class Resource>
+	struct Handle
+	{
+		std::uint32_t index{ UINT32_MAX };
+		std::uint32_t generation{ UINT32_MAX };
+
+		constexpr bool isVaild()
+		{
+			return index != vaildValue;
+		}
+	};
+
+	using BufferHandle = Handle<struct BufferTag>;
+	using TextureHandle = Handle<struct TextureTag>;
+	using ViewHandle = Handle<struct ViewTag>;
+
 	struct VertexBinding
 	{
 		std::uint32_t binding{ UINT32_MAX };
@@ -188,6 +212,6 @@ namespace wrj {
 
 	struct GraphicsPipeline
 	{
-
+		
 	};
 }

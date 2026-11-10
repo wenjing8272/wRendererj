@@ -36,9 +36,9 @@ namespace wrj {
 		vkb::destroy_instance(m_instance);
 	}
 
-	void RenderContext::initRenderContext(const NativeResources& native,const std::vector<std::string>& instanceExtensions)
+	void RenderContext::initRenderContext(const InitResource& initRes,const std::vector<std::string>& instanceExtensions)
 	{
-		initDevice(native, instanceExtensions);
+		initDevice(initRes, instanceExtensions);
 
 		m_frameSync = std::make_unique<FrameSync>();
 		m_frameSync->initFrameSync(m_device, m_graphicsQueue, static_cast<std::uint32_t>(m_swapchainImages.size()));
@@ -64,15 +64,15 @@ namespace wrj {
 		}
 	}
 
-	void RenderContext::initDevice(const NativeResources& native,const std::vector<std::string>& instanceExtensions)
+	void RenderContext::initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions)
 	{
 		// ---------- 1. 创建 VkInstance ----------
 		// Instance 是整个 Vulkan 上下文的根对象，surface、physical device、device
 		// 都挂在它下面。require_api_version(1,3,0) 表示我们只使用 1.3 的核心能力
 		// （dynamic rendering、synchronization2 等，但它们是否启用还要单独开 feature）。
 		vkb::InstanceBuilder instanceBuilder;
-		instanceBuilder.set_app_name("MyApp")
-			.set_engine_name("MyEngine")
+		instanceBuilder.set_app_name(initRes.appName)
+			.set_engine_name(initRes.appName)
 			.require_api_version(1, 3, 0)
 			.enable_extensions(instanceExtensions);
 #ifndef NDEBUG
@@ -93,14 +93,14 @@ namespace wrj {
 		//   display -> HINSTANCE（GetModuleHandle），Win32 surface 所属的模块实例
 		//   window  -> HWND（glfwGetWin32Window），实际窗口
 		// sType 才是结构体类型标识，flags 是保留字段（必须为 0），不要填反。
-		if (native.display == nullptr || native.window == nullptr)
+		if (initRes.native.display == nullptr || initRes.native.window == nullptr)
 		{
 			throw std::runtime_error("Invalid native resources provided");
 		}
 		VkWin32SurfaceCreateInfoKHR surfaceInfo{};
 		surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		surfaceInfo.hinstance = static_cast<HINSTANCE>(native.display);
-		surfaceInfo.hwnd = static_cast<HWND>(native.window);
+		surfaceInfo.hinstance = static_cast<HINSTANCE>(initRes.native.display);
+		surfaceInfo.hwnd = static_cast<HWND>(initRes.native.window);
 		VkResult surfaceResult = vkCreateWin32SurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface);
 		// VkResult 是枚举，只有 0（VK_SUCCESS）代表成功，必须显式比较；
 		// 写成 if (!surfaceResult) 会把成功当成失败、把失败当成成功。
@@ -176,7 +176,7 @@ namespace wrj {
 		}
 		m_swapchainImages = swapchainImagesResult.value();
 		
-		m_swapchainArea = { {0,0},{native.frameBufferWidth,native.frameBufferHeight} };
+		m_swapchainArea = { {0,0},{initRes.frameBufferWidth,initRes.frameBufferHeight} };
 		// ---------- 7. 创建图像视图 ----------
 		// 上面的 image 不同，VkImageView 是我们通过 vkCreateImageView 创建的，
 		// 所有权在我们手里：必须在销毁 swapchain 之前用

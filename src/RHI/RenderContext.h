@@ -24,7 +24,7 @@ namespace wrj {
 		RenderContext& operator=(const RenderContext& otherRenderContext) = delete;
 		RenderContext(RenderContext&& otherRenderContext) = delete;
 		RenderContext& operator=(RenderContext&& otherRenderContext) = delete;
-		void initRenderContext(const NativeResources& native,const std::vector<std::string>& instanceExtensions);
+		void initRenderContext(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
 		void recreateSwapchain(Extent2D extent);
 
 		void createBuffer();
@@ -35,7 +35,7 @@ namespace wrj {
 		void endRendering();
 		void end(bool& swapchainDirty);
 	private:
-		void initDevice(const NativeResources& native,const std::vector<std::string>& instanceExtensions);
+		void initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
 
 		vkb::Instance m_instance;
 		// 必须初始化为空句柄：initRenderContext 中途失败时析构函数仍会执行销毁逻辑

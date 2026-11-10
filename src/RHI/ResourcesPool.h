@@ -2,6 +2,11 @@
 #include<vulkan/vulkan.h>
 
 namespace wrj {
+	struct BufferRecord
+	{
+
+	};
+
 	class ResourcesManger
 	{
 	public:
@@ -12,6 +17,9 @@ namespace wrj {
 		VkBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkDeviceMemory& bufferMemory);
 		VkImage createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkDeviceMemory& imageMemory);
 		VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
+		void destoryBuffer();
+
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 		void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	private:

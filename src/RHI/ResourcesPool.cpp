@@ -1,4 +1,4 @@
-#include"ResourcesManger.h"
+#include"ResourcesPool.h"
 
 namespace wrj {
 	void ResourcesManger::init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue)
