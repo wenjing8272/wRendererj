@@ -27,7 +27,7 @@ int main()
 			windowManger.pollEvents();
 			if (swapchainDirty || windowManger.consumeFramebufferResized())
 			{
-				auto framebufferSize = windowManger.getFramebufferSize();
+				auto framebufferSize  = windowManger.getFramebufferSize();
 				while (framebufferSize.width == 0 || framebufferSize.height == 0)
 				{
 					windowManger.waitEvents();

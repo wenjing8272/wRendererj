@@ -3,8 +3,22 @@
 #include<cstdint>
 #include<vector>
 #include<limits>
+#include<span>
 
 namespace wrj {
+	struct NativeResources
+	{
+		void* display{ nullptr };
+		void* window{ nullptr };
+	};
+
+	struct InitResource
+	{
+		NativeResources native{};
+		std::uint32_t frameBufferWidth{ 0 };
+		std::uint32_t frameBufferHeight{ 0 };
+		const char* appName = "wRenderj";
+	};
 
 	struct Offset2D
 	{
@@ -20,19 +34,6 @@ namespace wrj {
 	{
 		Offset2D offset;
 		Extent2D extent;
-	};
-	struct NativeResources
-	{
-		void* display{ nullptr };
-		void* window{ nullptr };
-	};
-
-	struct InitResource
-	{
-		NativeResources native{};
-		std::uint32_t frameBufferWidth{ 0 };
-		std::uint32_t frameBufferHeight{ 0 };
-		const char* appName = "wRenderj";
 	};
 
 	struct Viewport
@@ -100,6 +101,12 @@ namespace wrj {
 		return (value & flag) != TextureUsage::None;
 	}
 
+	enum class MemoryProperty 
+	{
+		HostVisible,
+		DeviceLocal
+	};
+
 	enum class ShaderStage :std::uint32_t
 	{
 		None = 0,
@@ -119,45 +126,10 @@ namespace wrj {
 	{
 		return (value & flag) != ShaderStage::None;
 	}
-	enum class VertexFormat {
-		Float,
-		Float2,
-		Float3,
-		Float4,
-		UInt32
-	};
-
-	enum class PrimitiveTopology {
-		TriangleList,
-		TriangleStrip
-	};
-
-	enum class CullMode {
-		None,
-		Front,
-		Back
-	};
-
-	enum class FrontFace {
-		CounterClockwise,
-		Clockwise
-	};
-
-	enum class CompareOp {
-		Never,
-		Less,
-		LessOrEqual,
-		Always
-	};
-
-	enum class IndexType {
-		UInt16,
-		UInt32
-	};
 
 	constexpr std::uint32_t vaildValue = UINT32_MAX;
 
-	template<class Resource>
+	template<class Tag>
 	struct Handle
 	{
 		std::uint32_t index{ UINT32_MAX };
@@ -172,6 +144,7 @@ namespace wrj {
 	using BufferHandle = Handle<struct BufferTag>;
 	using TextureHandle = Handle<struct TextureTag>;
 	using ViewHandle = Handle<struct ViewTag>;
+	using ShaderHandle = Handle<struct ShaderTag>;
 
 	struct VertexBinding
 	{
@@ -210,8 +183,60 @@ namespace wrj {
 		}
 	};
 
+	enum class PrimitiveTopology
+	{
+		LineList,
+		TriangleList,
+		TriangleStrip
+	};
+
+	enum class PolygonMode
+	{
+		Fill,
+		Line,
+		Point
+	};
+
+	enum class CullMode
+	{
+		Front,
+		Back
+	};
+
+	enum class FrontFace
+	{
+		Clockwise,
+		CounterClockwise
+	};
+
+	enum class SampleCount
+	{
+		e1,
+		e4,
+		e16
+	};
+
+	enum class DynamicState
+	{
+		Viewport,
+		Scissor
+	};
+
 	struct GraphicsPipeline
 	{
-		
+		ShaderHandle vertexShader{};
+		ShaderHandle fragmentShader{};
+		const char* vertexName = "vertMain";
+		const char* fragmentName = "fragMain";
+		std::span<VertexBinding> vertexBinding;
+		std::span<VertexAttribute> vertexAttribute;
+		PushConstantRange pushConstantRange{};
+		PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleList };
+		PolygonMode polygonMode{ PolygonMode::Fill };
+		CullMode cullMode{ CullMode::Back };
+		FrontFace frontFace{ FrontFace::Clockwise };
+		bool depthBaisEnable{ false };
+		SampleCount sampleCount{ SampleCount::e1 };
+		std::span<DynamicState> dynamicStates;
 	};
 }

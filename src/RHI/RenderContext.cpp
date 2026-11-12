@@ -9,6 +9,8 @@
 #include"RenderContext.h"
 #include"FrameSync.h"
 #include"CommandList.h"
+#include"ResourcesPool.h"
+#include"Common.h"
 
 #include<iostream>
 
@@ -26,6 +28,7 @@ namespace wrj {
 		{
 			commandList.reset();
 		}
+		m_resourcesPool.reset();
 		vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 		vkDestroyCommandPool(m_device, m_transferPool, nullptr);
 		vkDestroyCommandPool(m_device,m_computePool, nullptr);
@@ -62,6 +65,9 @@ namespace wrj {
 			m_commandLists[i] = std::make_unique<CommandList>();
 			m_commandLists[i]->initCommandList(m_device, m_graphicsQueueFamlily, buffers[i]);
 		}
+
+		m_resourcesPool = std::make_unique<ResourcesPool>();
+		m_resourcesPool->init(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue,m_allocator);
 	}
 
 	void RenderContext::initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions)
@@ -280,6 +286,10 @@ namespace wrj {
 		m_swapchainImageViews = swapchainImageViewsResult.value();
 
 		m_frameSync->recreateRenderingFinishedSemaphore(static_cast<std::uint32_t>(m_swapchainImages.size()));
+	}
+	BufferHandle RenderContext::createBuffer(std::uint64_t size, BufferUsage bufferUsage, MemoryProperty memoryProperty)
+	{
+		return m_resourcesPool->createBuffer(size, userToVK(bufferUsage), userToVK(memoryProperty));
 	}
 	void RenderContext::begin(bool& swapchainDirty)
 	{

@@ -16,6 +16,8 @@ namespace wrj {
 
 	class CommandList;
 
+	class ResourcesPool;
+
 	class RenderContext {
 	public:
 		RenderContext();
@@ -27,7 +29,7 @@ namespace wrj {
 		void initRenderContext(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
 		void recreateSwapchain(Extent2D extent);
 
-		void createBuffer();
+		BufferHandle createBuffer(std::uint64_t size,BufferUsage bufferUsage,MemoryProperty memoryProperty);
 		void createImage();
 
 		void begin(bool& swapchainDirty);
@@ -66,5 +68,7 @@ namespace wrj {
 		std::optional<FrameResources> m_currentFrame;
 
 		std::vector<std::unique_ptr<CommandList>> m_commandLists;
+		
+		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
 	};
 }
