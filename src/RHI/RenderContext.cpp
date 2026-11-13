@@ -29,6 +29,7 @@ namespace wrj {
 			commandList.reset();
 		}
 		m_resourcesPool.reset();
+		vmaDestroyAllocator(m_allocator);
 		vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 		vkDestroyCommandPool(m_device, m_transferPool, nullptr);
 		vkDestroyCommandPool(m_device,m_computePool, nullptr);

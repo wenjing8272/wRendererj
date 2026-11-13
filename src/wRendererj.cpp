@@ -3,6 +3,7 @@
 #include"Window/WindowManger.h"
 #include"RHI/Types.h"
 #include"RHI/RenderContext.h"
+#include"Asset/Test.h"
 
 #include <VkBootstrap.h>
 #include <iostream>
@@ -21,6 +22,17 @@ int main()
 		initRes.frameBufferHeight = initFramebufferSize.height;
 		initRes.appName = " wRenderj";
 		renderContext.initRenderContext(initRes, windowManger.getRequiredInstanceExtensions());
+
+		auto vertices = wrj::getVertices();
+		if (vertices.empty())
+		{
+			std::cout << "empty" << '\n';
+		}
+		else
+		{
+			std::uint64_t size = sizeof(vertices[0]) * vertices.size();
+			renderContext.createBuffer(size, wrj::BufferUsage::VertexBuffer, wrj::MemoryProperty::HostVisible);
+		}
 		while (!windowManger.windowShouldClose())
 		{
 			windowManger.closeWindowEvent();

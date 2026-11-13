@@ -9,7 +9,6 @@ namespace wrj {
 	struct BufferRecord
 	{
 		VkBuffer buffer{ VK_NULL_HANDLE };
-		VkDeviceMemory bufferMemory{ VK_NULL_HANDLE };
 		VmaAllocation allocation{ VK_NULL_HANDLE };
 		void* mapped{ nullptr };
 
@@ -28,12 +27,13 @@ namespace wrj {
 		VkImage createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkDeviceMemory& imageMemory);
 		VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
-		void destoryBuffer();
+		void destoryBuffer(BufferHandle bufferHandle);
 
+		void copyBuffer();
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 		void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	private:
-		std::uint32_t acquireIndex(std::vector<BufferRecord> buffers);
+		std::uint32_t acquireIndex(std::vector<BufferRecord>& buffers);
 		VkDevice m_device;
 		VkPhysicalDevice m_physicalDevice;
 		VkCommandPool m_commandPool;

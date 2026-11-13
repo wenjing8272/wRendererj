@@ -33,6 +33,7 @@ add_executable(${PROJECT_NAME}
     src/RHI/CommandList.cpp
     src/RHI/ResourcesPool.cpp
     src/RHI/Common.cpp
+    src/RHI/Upload.cpp
     src/Asset/Test.h
 )
 # 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
