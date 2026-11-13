@@ -10,6 +10,7 @@
 #include"FrameSync.h"
 #include"CommandList.h"
 #include"ResourcesPool.h"
+#include"Upload.h"
 #include"Common.h"
 
 #include<iostream>
@@ -23,6 +24,7 @@ namespace wrj {
 	RenderContext::~RenderContext()
 	{
 		vkDeviceWaitIdle(m_device);
+		m_upload.reset();
 		m_frameSync.reset();
 		for (auto& commandList : m_commandLists)
 		{
@@ -68,7 +70,10 @@ namespace wrj {
 		}
 
 		m_resourcesPool = std::make_unique<ResourcesPool>();
-		m_resourcesPool->init(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue,m_allocator);
+		m_resourcesPool->init(m_device, m_commandPool, m_graphicsQueue,m_allocator);
+
+		m_upload = std::make_unique<Upload>();
+		m_upload->init(m_device,m_transferPool, m_transferQueue);
 	}
 
 	void RenderContext::initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions)
@@ -291,6 +296,18 @@ namespace wrj {
 	BufferHandle RenderContext::createBuffer(std::uint64_t size, BufferUsage bufferUsage, MemoryProperty memoryProperty)
 	{
 		return m_resourcesPool->createBuffer(size, userToVK(bufferUsage), userToVK(memoryProperty));
+	}
+	void RenderContext::copyBuffer(BufferHandle copyBuffer, const void* data, std::uint64_t dataSize)
+	{
+		m_resourcesPool->copyBuffer(copyBuffer, data, dataSize);
+	}
+	void RenderContext::uploadBuffer(BufferHandle srcBufferHandle, BufferHandle dstBufferHandle,std::uint64_t bufferSize)
+	{
+		if (!m_resourcesPool->isBufferVaild(srcBufferHandle) || !m_resourcesPool->isBufferVaild(dstBufferHandle))
+		{
+			throw std::runtime_error("src or dst buffer no vaild");
+		}
+		m_upload->uploadBuffer(m_resourcesPool->getBuffer(srcBufferHandle), m_resourcesPool->getBuffer(dstBufferHandle),bufferSize);
 	}
 	void RenderContext::begin(bool& swapchainDirty)
 	{

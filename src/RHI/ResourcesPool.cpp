@@ -1,5 +1,8 @@
 #include"ResourcesPool.h"
 
+#include<cassert>
+#include<stdexcept>
+
 namespace wrj {
 	ResourcesPool::~ResourcesPool()
 	{
@@ -9,10 +12,9 @@ namespace wrj {
 				vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
 		}
 	}
-	void ResourcesPool::init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator)
+	void ResourcesPool::init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator)
 	{
 		m_device = device;
-		m_physicalDevice = physicalDevice;
 		m_commandPool = commandPool;
 		m_graphicsQueue = graphicsQueue;
 		m_allocator = allocator;
@@ -51,20 +53,44 @@ namespace wrj {
 		else
 		{
 			allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-			allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		}
 
 		VmaAllocationInfo allocationInfo{};
-		vmaCreateBuffer(m_allocator, &bufferInfo, &allocationCreateInfo, &bufferRecord.buffer, &bufferRecord.allocation, &allocationInfo);
+		auto result = vmaCreateBuffer(m_allocator, &bufferInfo, &allocationCreateInfo, &bufferRecord.buffer, &bufferRecord.allocation, &allocationInfo);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create buffer");
+		}
 		bufferRecord.mapped = allocationInfo.pMappedData;
+
+		bufferRecord.size = size;
 
 		return { index,bufferRecord.generation };
 	}
+	void ResourcesPool::copyBuffer(BufferHandle copyBuffer, const void* data, VkDeviceSize dataSize)
+	{
+		auto& buffer = m_buffers[copyBuffer.index];
+		assert(dataSize == buffer.size && buffer.alive && buffer.generation == copyBuffer.generation, "buffer has not vailde");
+		if (buffer.mapped == nullptr)
+		{
+			throw std::runtime_error("no mapped memory");
+		}
+		memcpy(m_buffers[copyBuffer.index].mapped, data, dataSize);
+	}
+	bool ResourcesPool::isBufferVaild(BufferHandle bufferHandle)
+	{
+		if (bufferHandle.index >= m_buffers.size())return false;
+		return m_buffers[bufferHandle.index].alive && m_buffers[bufferHandle.index].generation == bufferHandle.generation;
+	}
+	VkBuffer ResourcesPool::getBuffer(BufferHandle bufferHandle)
+	{
+		return m_buffers[bufferHandle.index].buffer;
+	}
 	void ResourcesPool::destoryBuffer(BufferHandle bufferHandle)
 	{
-		if (bufferHandle.index >= m_buffers.size())return;
-		auto& buffer = m_buffers[bufferHandle.index];
-		if (!buffer.alive || buffer.generation != bufferHandle.generation)return;
+		if (!isBufferVaild(bufferHandle))return;
+		auto buffer = m_buffers[bufferHandle.index];
 		vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
 		buffer.alive = false;
 		buffer.buffer = VK_NULL_HANDLE;

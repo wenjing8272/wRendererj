@@ -31,7 +31,10 @@ int main()
 		else
 		{
 			std::uint64_t size = sizeof(vertices[0]) * vertices.size();
-			renderContext.createBuffer(size, wrj::BufferUsage::VertexBuffer, wrj::MemoryProperty::HostVisible);
+			auto stagingBufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferSrc, wrj::MemoryProperty::HostVisible);
+			renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
+			auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst, wrj::MemoryProperty::DeviceLocal);
+			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
 		}
 		while (!windowManger.windowShouldClose())
 		{

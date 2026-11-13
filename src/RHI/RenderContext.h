@@ -18,6 +18,8 @@ namespace wrj {
 
 	class ResourcesPool;
 
+	class Upload;
+
 	class RenderContext {
 	public:
 		RenderContext();
@@ -31,6 +33,9 @@ namespace wrj {
 
 		BufferHandle createBuffer(std::uint64_t size,BufferUsage bufferUsage,MemoryProperty memoryProperty);
 		void createImage();
+
+		void copyBuffer(BufferHandle copyBuffer, const void* data, std::uint64_t dataSize);
+		void uploadBuffer(BufferHandle srcBufferHandle, BufferHandle dstBufferHandle,std::uint64_t bufferSize);
 
 		void begin(bool& swapchainDirty);
 		void beginRendering();
@@ -70,5 +75,7 @@ namespace wrj {
 		std::vector<std::unique_ptr<CommandList>> m_commandLists;
 		
 		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
+
+		std::unique_ptr<Upload> m_upload{ nullptr };
 	};
 }
