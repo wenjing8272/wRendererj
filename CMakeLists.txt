@@ -11,6 +11,7 @@ endif()
 project ("wRendererj")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Vulkan REQUIRED)
 
@@ -64,10 +65,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # 编译着色器
 set(test_shader "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/test.slang")
+set(tt_shader "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/tt.slang")
 
 function(compile_shader target output_name)
     cmake_parse_arguments(PARSE_ARGV 2 shader "" "" "sources;entry")
-    set(out_shader_dir "${CMAKE_CURRENT_LIST_DIR}/Shaders/compileShaders")
+    set(out_shader_dir "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/compileShaders")   # ${CMAKE_CURRENT_BINARY_DIR}，可以定位到cmake的构建目录，在这个项目是.exe所在的目录
     file(MAKE_DIRECTORY ${out_shader_dir})
 
     set(entry_args "")
@@ -94,7 +96,10 @@ endfunction()
 compile_shader(test_shader_compile test_shader.spv 
                sources ${test_shader}
                entry mainVert)
-add_dependencies(${PROJECT_NAME} test_shader_compile)
+compile_shader(tt_shader_compile tt_shader.spv
+               sources ${tt_shader}
+               entry vertMain)
+add_dependencies(${PROJECT_NAME} test_shader_compile tt_shader_compile)
 
 # 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
 # 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，

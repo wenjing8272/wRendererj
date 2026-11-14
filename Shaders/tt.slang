@@ -1,0 +1,6 @@
+
+[shader("vertex")]
+void vertMain()
+{
+	
+}
