@@ -19,7 +19,8 @@ namespace wrj {
 		m_graphicsQueue = graphicsQueue;
 		m_allocator = allocator;
 	}
-	std::uint32_t ResourcesPool::acquireIndex(std::vector<BufferRecord>& buffers)
+	template<class Record>
+	std::uint32_t ResourcesPool::acquireIndex(std::vector<Record>& buffers)
 	{
 		for (size_t i = 0;i < buffers.size();++i)
 		{
@@ -83,6 +84,7 @@ namespace wrj {
 		if (bufferHandle.index >= m_buffers.size())return false;
 		return m_buffers[bufferHandle.index].alive && m_buffers[bufferHandle.index].generation == bufferHandle.generation;
 	}
+
 	VkBuffer ResourcesPool::getBuffer(BufferHandle bufferHandle)
 	{
 		return m_buffers[bufferHandle.index].buffer;

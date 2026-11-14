@@ -20,6 +20,8 @@ namespace wrj {
 
 	class Upload;
 
+	class Pipeline;
+
 	class RenderContext {
 	public:
 		RenderContext();
@@ -77,5 +79,7 @@ namespace wrj {
 		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
 
 		std::unique_ptr<Upload> m_upload{ nullptr };
+
+		std::unique_ptr<Pipeline>m_pipeline{ nullptr };
 	};
 }

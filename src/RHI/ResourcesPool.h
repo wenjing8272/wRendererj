@@ -17,6 +17,14 @@ namespace wrj {
 		std::uint32_t generation{ UINT32_MAX };
 	};
 
+	struct ShaderRecord
+	{
+		VkShaderModule shaderModule{ VK_NULL_HANDLE };
+		
+		bool alive{ false };
+		std::uint32_t generation{ UINT32_MAX };
+	};
+
 	class ResourcesPool
 	{
 	public:
@@ -25,6 +33,7 @@ namespace wrj {
 		void init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator);
 
 		BufferHandle createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+		ShaderHandle createShaderModule(const std::vector<char>& code);
 		VkImage createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkDeviceMemory& imageMemory);
 		VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 		bool isBufferVaild(BufferHandle bufferHandle);
@@ -36,7 +45,8 @@ namespace wrj {
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 		void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	private:
-		std::uint32_t acquireIndex(std::vector<BufferRecord>& buffers);
+		template<class Record>
+		std::uint32_t acquireIndex(std::vector<Record>& buffers);
 		VkDevice m_device{ VK_NULL_HANDLE };
 		VkCommandPool m_commandPool{ VK_NULL_HANDLE };
 		VkQueue m_graphicsQueue{ VK_NULL_HANDLE };

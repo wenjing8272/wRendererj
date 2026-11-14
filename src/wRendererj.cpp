@@ -36,6 +36,7 @@ int main()
 			auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst, wrj::MemoryProperty::DeviceLocal);
 			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
 		}
+		
 		while (!windowManger.windowShouldClose())
 		{
 			windowManger.closeWindowEvent();

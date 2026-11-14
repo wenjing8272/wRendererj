@@ -11,6 +11,7 @@
 #include"CommandList.h"
 #include"ResourcesPool.h"
 #include"Upload.h"
+#include"Pipeline.h"
 #include"Common.h"
 
 #include<iostream>
@@ -24,6 +25,7 @@ namespace wrj {
 	RenderContext::~RenderContext()
 	{
 		vkDeviceWaitIdle(m_device);
+		m_pipeline.reset();
 		m_upload.reset();
 		m_frameSync.reset();
 		for (auto& commandList : m_commandLists)
@@ -74,6 +76,9 @@ namespace wrj {
 
 		m_upload = std::make_unique<Upload>();
 		m_upload->init(m_device,m_transferPool, m_transferQueue);
+
+		m_pipeline = std::make_unique<Pipeline>();
+		m_pipeline->init(m_device);
 	}
 
 	void RenderContext::initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions)

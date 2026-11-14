@@ -17,13 +17,19 @@ find_package(Vulkan REQUIRED)
 add_library(vma STATIC external/VMA/vk_mem_alloc.cpp)
 
 find_package(Vulkan REQUIRED)
+if(NOT SLANGC_EXECUTABLE)
+    find_program(SLANGC_EXECUTABLE slangc HINTS "${Vulkan_SDK_PATH}/bin" "$ENV{VULKAN_SDK}/bin")
+endif()
+if(NOT SLANGC_EXECUTABLE)
+    message(FATAL_ERROR "failed to find sanglc: please set slang executable")
+endif()
  
-# 1. 先处理第三方库
+# 处理第三方库
 add_subdirectory(external/vk-bootstrap)
 add_subdirectory(external/glm)
 
 
-# 2. 再创建自己的目标
+# 创建自己的目标
 add_executable(${PROJECT_NAME} 
     src/wRendererj.cpp
     src/Window/WindowManger.cpp
@@ -34,16 +40,12 @@ add_executable(${PROJECT_NAME}
     src/RHI/ResourcesPool.cpp
     src/RHI/Common.cpp
     src/RHI/Upload.cpp
+    src/RHI/Pipeline.cpp
     src/Asset/Test.h
 )
-# 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
-# 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，
-# 导致下一行被并入注释（头文件 include、函数签名凭空消失）。必须显式指定 /utf-8。
-if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
-endif()
 
-# 3. 最后给目标加配置
+
+# 给目标加配置
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/external/VMA
 )
@@ -59,3 +61,44 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     vma
 )
+
+# 编译着色器
+set(test_shader "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/test.slang")
+
+function(compile_shader target output_name)
+    cmake_parse_arguments(PARSE_ARGV 2 shader "" "" "sources;entry")
+    set(out_shader_dir "${CMAKE_CURRENT_LIST_DIR}/Shaders/compileShaders")
+    file(MAKE_DIRECTORY ${out_shader_dir})
+
+    set(entry_args "")
+    foreach(E ${shader_entry})
+        list(APPEND entry_args -entry ${E})
+    endforeach()
+    if(NOT entry_args)
+        message(FATAL_ERROR "please set entry name")
+    endif()
+    if(NOT shader_sources)
+        message(FATAL_ERROR "please set compile goal")
+    endif()
+
+    add_custom_command(
+        OUTPUT ${out_shader_dir}/${output_name}
+        COMMAND ${SLANGC_EXECUTABLE} ${shader_sources} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${entry_args} -o "${output_name}"
+        WORKING_DIRECTORY ${out_shader_dir}
+        DEPENDS ${shader_sources}
+        COMMENT "compiling ${output_name}"
+        VERBATIM
+    )
+    add_custom_target(${target} DEPENDS "${out_shader_dir}/${output_name}")
+endfunction()
+compile_shader(test_shader_compile test_shader.spv 
+               sources ${test_shader}
+               entry mainVert)
+add_dependencies(${PROJECT_NAME} test_shader_compile)
+
+# 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
+# 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，
+# 导致下一行被并入注释（头文件 include、函数签名凭空消失）。必须显式指定 /utf-8。
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+endif()
