@@ -314,6 +314,10 @@ namespace wrj {
 		}
 		m_upload->uploadBuffer(m_resourcesPool->getBuffer(srcBufferHandle), m_resourcesPool->getBuffer(dstBufferHandle),bufferSize);
 	}
+	ShaderHandle RenderContext::createShader(const std::vector<std::uint32_t>& shaderCode)
+	{
+		return m_pipeline->createShader(shaderCode);
+	}
 	void RenderContext::begin(bool& swapchainDirty)
 	{
 		m_currentFrame = m_frameSync->frameBegin(m_swapchain);

@@ -17,14 +17,6 @@ namespace wrj {
 		std::uint32_t generation{ UINT32_MAX };
 	};
 
-	struct ShaderRecord
-	{
-		VkShaderModule shaderModule{ VK_NULL_HANDLE };
-		
-		bool alive{ false };
-		std::uint32_t generation{ UINT32_MAX };
-	};
-
 	class ResourcesPool
 	{
 	public:

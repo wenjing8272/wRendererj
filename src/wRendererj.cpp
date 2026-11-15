@@ -5,8 +5,29 @@
 #include"RHI/RenderContext.h"
 #include"Asset/Test.h"
 
-#include <VkBootstrap.h>
 #include <iostream>
+#include<filesystem>
+#include<fstream>
+std::vector<std::uint32_t> readFile(std::filesystem::path shaderPath)
+{
+	std::cout << "current file directory: " << std::filesystem::current_path() << '\n';
+	std::ifstream file(shaderPath,std::ios::ate | std::ios::binary);
+	if (!file.is_open())
+	{
+		throw std::runtime_error("failed to open shader file");
+	}
+	const auto end = file.tellg();
+	const auto size = static_cast<size_t>(end);
+	assert(size % sizeof(std::uint32_t) == 0 && "shader code must be a multiple of 4");
+	std::vector<std::uint32_t> code(size / sizeof(std::uint32_t));
+	file.seekg(0, std::ios::beg);
+	if (!file.read(reinterpret_cast<char*>(code.data()),static_cast<std::streamsize>(size)))
+	{
+		throw std::runtime_error("failed to read shader file");
+	}
+	return code;
+}
+
 
 int main()
 {
@@ -36,7 +57,8 @@ int main()
 			auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst, wrj::MemoryProperty::DeviceLocal);
 			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
 		}
-		
+		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
+		auto testShaderHandle = renderContext.createShader(shaderCode);
 		while (!windowManger.windowShouldClose())
 		{
 			windowManger.closeWindowEvent();

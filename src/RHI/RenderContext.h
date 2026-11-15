@@ -39,6 +39,8 @@ namespace wrj {
 		void copyBuffer(BufferHandle copyBuffer, const void* data, std::uint64_t dataSize);
 		void uploadBuffer(BufferHandle srcBufferHandle, BufferHandle dstBufferHandle,std::uint64_t bufferSize);
 
+		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
+
 		void begin(bool& swapchainDirty);
 		void beginRendering();
 		void endRendering();

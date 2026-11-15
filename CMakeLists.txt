@@ -69,7 +69,7 @@ set(tt_shader "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/tt.slang")
 
 function(compile_shader target output_name)
     cmake_parse_arguments(PARSE_ARGV 2 shader "" "" "sources;entry")
-    set(out_shader_dir "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/compileShaders")   # ${CMAKE_CURRENT_BINARY_DIR}，可以定位到cmake的构建目录，在这个项目是.exe所在的目录
+    set(out_shader_dir "${CMAKE_CURRENT_BINARY_DIR}/Shaders/compileShaders")   # ${CMAKE_CURRENT_BINARY_DIR}，可以定位到cmake的构建目录，在这个项目是.exe所在的目录
     file(MAKE_DIRECTORY ${out_shader_dir})
 
     set(entry_args "")
