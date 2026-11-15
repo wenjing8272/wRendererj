@@ -238,6 +238,7 @@ namespace wrj {
 		FrontFace frontFace{ FrontFace::Clockwise };
 		bool depthBaisEnable{ false };
 		SampleCount sampleCount{ SampleCount::e1 };
+		bool blendEnable{ false };
 		std::span<DynamicState> dynamicStates;
 	};
 }

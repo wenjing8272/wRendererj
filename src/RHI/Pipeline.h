@@ -16,6 +16,7 @@ namespace wrj {
 	struct PipelineRecord
 	{
 		VkPipeline pipeline{ VK_NULL_HANDLE };
+		VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
 
 		std::uint32_t generation{ UINT32_MAX };
 		bool alive{ false };
@@ -32,9 +33,11 @@ namespace wrj {
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
 		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline);
 	private:
-		std::uint32_t acquireIndex(std::vector<ShaderRecord>& shaderRecord);
+		template<class Record>
+		std::uint32_t acquireIndex(std::vector<Record>& record);
 		VkDevice m_device{ VK_NULL_HANDLE };
 
 		std::vector<ShaderRecord> m_shaders;
+		std::vector<PipelineRecord> m_pipelines;
 	};
 }

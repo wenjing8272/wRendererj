@@ -16,19 +16,20 @@ namespace wrj {
 	{
 		m_device = device;
 	}
-	std::uint32_t Pipeline::acquireIndex(std::vector<ShaderRecord>& shaderRecord)
+	template<class Record>
+	std::uint32_t Pipeline::acquireIndex(std::vector<Record>& records)
 	{
-		for (std::uint32_t i = 0;i < shaderRecord.size();++i)
+		for (std::uint32_t i = 0;i < records.size();++i)
 		{
-			if (shaderRecord[i].alive)continue;
-			shaderRecord[i].alive = true;
-			shaderRecord[i].generation += 1;
+			if (records[i].alive)continue;
+			records[i].alive = true;
+			records[i].generation += 1;
 			return i;
 		}
-		auto& shader = shaderRecord.emplace_back();
-		shader.alive = true;
-		shader.generation = 1;
-		return static_cast<std::uint32_t>(shaderRecord.size() - 1);
+		auto& record = records.emplace_back();
+		record.alive = true;
+		record.generation = 1;
+		return static_cast<std::uint32_t>(records.size() - 1);
 	}
 	ShaderHandle Pipeline::createShader(const std::vector<std::uint32_t>& shaderCode)
 	{
@@ -56,6 +57,8 @@ namespace wrj {
 		{
 			throw std::runtime_error("vertex shader no has");
 		}
+		const auto pipelineIndex = acquireIndex(m_pipelines);
+		auto pipeline = m_pipelines[pipelineIndex];
 
 		VkPipelineShaderStageCreateInfo vertexShaderInfo{};
 		vertexShaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -69,10 +72,10 @@ namespace wrj {
 		fragmentShaderInfo.pName = graphicsPipeline.fragmentName;
 		fragmentShaderInfo.module = m_shaders[graphicsPipeline.fragmentShader.index].shaderModule;
 
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderInfo,fragmentShaderInfo };
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages = { vertexShaderInfo,fragmentShaderInfo };
 
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
-		for (auto& i : graphicsPipeline.vertexBinding)
+		for (const auto& i : graphicsPipeline.vertexBinding)
 		{
 			if (i.isVaild())throw std::runtime_error("vertex binding no vaild");
 			auto& bindingDescription = bindingDescriptions.emplace_back();
@@ -88,7 +91,7 @@ namespace wrj {
 			}
 		}
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-		for (auto& i : graphicsPipeline.vertexAttribute)
+		for (const auto& i : graphicsPipeline.vertexAttribute)
 		{
 			if (i.isVaild())throw std::runtime_error("vertex attribute no vaild");
 			auto& attributeDescription = attributeDescriptions.emplace_back();
@@ -111,5 +114,63 @@ namespace wrj {
 
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportState.viewportCount = 1;
+		viewportState.scissorCount = 1;
+		std::vector<VkDynamicState> dynamics;
+		for (const auto& i : graphicsPipeline.dynamicStates)
+		{
+			auto& dynamic = dynamics.emplace_back();
+			dynamic = userToVK(i);
+		}
+		VkPipelineDynamicStateCreateInfo dynamicState{};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = static_cast<std::uint32_t>(dynamics.size());
+		dynamicState.pDynamicStates = dynamics.data();
+
+		VkPipelineRasterizationStateCreateInfo rasterizationState{};
+		rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationState.depthClampEnable = VK_FALSE;
+		rasterizationState.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationState.cullMode = userToVK(graphicsPipeline.cullMode);
+		rasterizationState.frontFace = userToVK(graphicsPipeline.frontFace);
+		rasterizationState.depthBiasEnable = userBoolToVK(graphicsPipeline.depthBaisEnable);
+
+		VkPipelineMultisampleStateCreateInfo multisampleState{};
+		multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleState.rasterizationSamples = userToVK(graphicsPipeline.sampleCount);
+		multisampleState.sampleShadingEnable = VK_FALSE;
+
+		VkPipelineColorBlendAttachmentState attachmentState{};
+		attachmentState.blendEnable = userBoolToVK(graphicsPipeline.blendEnable);
+		attachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+										 VK_COLOR_COMPONENT_G_BIT |
+										 VK_COLOR_COMPONENT_B_BIT |
+										 VK_COLOR_COMPONENT_A_BIT;
+		VkPipelineColorBlendStateCreateInfo blendState{};
+		blendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		blendState.logicOpEnable = VK_FALSE;
+		blendState.logicOp = VK_LOGIC_OP_COPY;
+		blendState.attachmentCount = 1;
+		blendState.pAttachments = &attachmentState;
+
+		VkPipelineLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+		vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &pipeline.pipelineLayout);
+		
+		VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
+		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineCreateInfo.pColorBlendState = &blendState;
+		pipelineCreateInfo.pDynamicState = &dynamicState;
+		pipelineCreateInfo.pInputAssemblyState = &assemblyState;
+		pipelineCreateInfo.pMultisampleState = &multisampleState;
+		pipelineCreateInfo.pRasterizationState = &rasterizationState;
+		pipelineCreateInfo.pVertexInputState = &vertexInputState;
+		pipelineCreateInfo.pViewportState = &viewportState;
+		pipelineCreateInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
+		pipelineCreateInfo.pStages = shaderStages.data();
+		pipelineCreateInfo.renderPass = nullptr;
+
+		vkCreateGraphicsPipelines(m_device, {}, 1, &pipelineCreateInfo, nullptr, &pipeline.pipeline);
 	}
 }

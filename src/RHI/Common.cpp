@@ -58,4 +58,51 @@ namespace wrj {
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		}
 	}
+	VkDynamicState userToVK(DynamicState dynamic)
+	{
+		switch (dynamic)
+		{
+		case DynamicState::Viewport:
+			return VK_DYNAMIC_STATE_VIEWPORT;
+		case DynamicState::Scissor:
+			return VK_DYNAMIC_STATE_SCISSOR;
+		}
+	}
+	VkCullModeFlags userToVK(CullMode cullMode)
+	{
+		switch (cullMode)
+		{
+		case CullMode::Front:
+			return VK_CULL_MODE_FRONT_BIT;
+		case CullMode::Back:
+			return VK_CULL_MODE_BACK_BIT;
+		}
+	}
+	VkFrontFace userToVK(FrontFace frontFace)
+	{
+		switch (frontFace)
+		{
+		case FrontFace::Clockwise:
+			return VK_FRONT_FACE_CLOCKWISE;
+		case FrontFace::CounterClockwise:
+			return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		}
+	}
+	VkSampleCountFlagBits userToVK(SampleCount sampleCount)
+	{
+		switch (sampleCount)
+		{
+		case SampleCount::e1:
+			return VK_SAMPLE_COUNT_1_BIT;
+		case SampleCount::e4:
+			return VK_SAMPLE_COUNT_4_BIT;
+		case SampleCount::e16:
+			return VK_SAMPLE_COUNT_16_BIT;
+		}
+	}
+	VkBool32 userBoolToVK(bool user)
+	{
+		if (user)return VK_TRUE;
+		return VK_FALSE;
+	}
 }
