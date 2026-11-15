@@ -145,6 +145,7 @@ namespace wrj {
 	using TextureHandle = Handle<struct TextureTag>;
 	using ViewHandle = Handle<struct ViewTag>;
 	using ShaderHandle = Handle<struct ShaderTag>;
+	using PipelineHandle = Handle<struct PipelineTag>;
 
 	struct VertexBinding
 	{

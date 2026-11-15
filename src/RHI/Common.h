@@ -5,4 +5,6 @@
 namespace wrj {
 	VkBufferUsageFlags userToVK(BufferUsage bufferUsage);
 	VkMemoryPropertyFlags userToVK(MemoryProperty memoryUsage);
+	VkFormat userToVK(Format format);
+	VkPrimitiveTopology userToVK(PrimitiveTopology topology);
 }
