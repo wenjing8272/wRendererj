@@ -40,7 +40,10 @@ namespace wrj {
 		shaderInfo.codeSize = static_cast<std::uint32_t>(4 * shaderCode.size());
 		shaderInfo.pCode = shaderCode.data();
 
-		vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shader.shaderModule);
+		if (vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shader.shaderModule) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create shader module");
+		}
 		return { shaderIndex,shader.generation };
 	}
 	PipelineHandle Pipeline::createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline)
@@ -156,7 +159,10 @@ namespace wrj {
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-		vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &pipeline.pipelineLayout);
+		if (vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &pipeline.pipelineLayout) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed create pipeline layout");
+		}
 		
 		VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
 		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -171,6 +177,18 @@ namespace wrj {
 		pipelineCreateInfo.pStages = shaderStages.data();
 		pipelineCreateInfo.renderPass = nullptr;
 
-		vkCreateGraphicsPipelines(m_device, {}, 1, &pipelineCreateInfo, nullptr, &pipeline.pipeline);
+		if (vkCreateGraphicsPipelines(m_device, {}, 1, &pipelineCreateInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create graphics pipeline");
+		}
+	}
+	VkPipeline Pipeline::getPipeline(PipelineHandle pipelineHandle)
+	{
+		return m_pipelines[pipelineHandle.index].pipeline;
+	}
+	bool Pipeline::pipelineIsVaild(PipelineHandle pipelineHandle)
+	{
+		if (pipelineHandle.index >= m_pipelines.size() || pipelineHandle.index < 0)return false;
+		return m_pipelines[pipelineHandle.index].alive && m_pipelines[pipelineHandle.index].generation == pipelineHandle.generation;
 	}
 }

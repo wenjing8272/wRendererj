@@ -19,12 +19,12 @@ namespace wrj {
 		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		vkBeginCommandBuffer(m_commandBuffer, &commandBufferBeginInfo);
 	}
-	void CommandList::recordCommand( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
+	void CommandList::beginRendering(VkImage swapchainImage, VkImageView swapchainImageView, Area2D renderArea)
 	{
 		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
-		
+										 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+										 VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
+
 		VkClearValue clearColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 		VkRenderingAttachmentInfo colorAttachment{};
@@ -34,7 +34,7 @@ namespace wrj {
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		
+
 		VkRenderingInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		renderingInfo.renderArea.offset = { renderArea.offset.x, renderArea.offset.y };
@@ -44,12 +44,27 @@ namespace wrj {
 		renderingInfo.pColorAttachments = &colorAttachment;
 
 		vkCmdBeginRendering(m_commandBuffer, &renderingInfo);
+	}
+	void CommandList::bindGraphicsPipeline(VkPipeline pipeline)
+	{
+		vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+	}
+	void CommandList::setViewport(VkViewport viewport)
+	{
+		vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+	}
+	void CommandList::setScissor(VkRect2D rect)
+	{
+		vkCmdSetScissor(m_commandBuffer, 0, 1, &rect);
+	}
+	void CommandList::endRendering( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
+	{
 		
 		vkCmdEndRendering(m_commandBuffer);
 
 		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
-			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
+												 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
+												 VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
 
 	}
 	VkCommandBuffer CommandList::endCommandBuffer()

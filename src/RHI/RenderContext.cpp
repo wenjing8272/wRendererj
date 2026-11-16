@@ -330,10 +330,32 @@ namespace wrj {
 	void RenderContext::beginRendering()
 	{
 		m_commandLists[m_currentFrame->frameIndex]->beginCommandBuffer();
-		m_commandLists[m_currentFrame->frameIndex]->recordCommand(m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
+		m_commandLists[m_currentFrame->frameIndex]->beginRendering(m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
+	}
+	void RenderContext::bindPipeline(PipelineHandle pipelineHandle)
+	{
+		if (!m_pipeline->pipelineIsVaild(pipelineHandle))
+		{
+			throw std::runtime_error("pipeline no vaild");
+		}
+		m_commandLists[m_currentFrame->frameIndex]->bindGraphicsPipeline(m_pipeline->getPipeline(pipelineHandle));
+	}
+	void RenderContext::setViewport(Viewport viewport)
+	{
+		m_commandLists[m_currentFrame->frameIndex]->setViewport({ viewport.x,
+																  viewport.y,
+																  viewport.width,
+																  viewport.height,
+																  viewport.minDepth,
+																  viewport.maxDepth });
+	}
+	void RenderContext::setScissor(Area2D area)
+	{
+		m_commandLists[m_currentFrame->frameIndex]->setScissor({ .offset = {area.offset.x,area.offset.y},.extent = {area.extent.width,area.extent.height} });
 	}
 	void RenderContext::endRendering()
 	{
+		m_commandLists[m_currentFrame->frameIndex]->endRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
 		auto commandBuffer = m_commandLists[m_currentFrame->frameIndex]->endCommandBuffer();
 		m_currentFrame->commandBuffer = commandBuffer;
 	}

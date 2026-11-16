@@ -43,6 +43,9 @@ namespace wrj {
 
 		void begin(bool& swapchainDirty);
 		void beginRendering();
+		void bindPipeline(PipelineHandle pipelineHandle);
+		void setViewport(Viewport viewport);
+		void setScissor(Area2D area);
 		void endRendering();
 		void end(bool& swapchainDirty);
 	private:

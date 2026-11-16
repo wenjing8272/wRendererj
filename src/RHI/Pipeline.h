@@ -32,6 +32,9 @@ namespace wrj {
 
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
 		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline);
+
+		bool pipelineIsVaild(PipelineHandle pipelineHandle);
+		VkPipeline getPipeline(PipelineHandle);
 	private:
 		template<class Record>
 		std::uint32_t acquireIndex(std::vector<Record>& record);
