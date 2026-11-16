@@ -38,6 +38,8 @@ namespace wrj {
 			return VK_FORMAT_B8G8R8A8_SRGB;
 		case Format::R16G16B16A16_SFloat:
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
+		case Format::R32G32B32A32_SFloat:
+			return VK_FORMAT_R32G32B32A32_SFLOAT;
 		case Format::R8G8_UNorm:
 			return VK_FORMAT_R8G8_UNORM;
 		case Format::D32_SFloat:

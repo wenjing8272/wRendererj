@@ -25,7 +25,7 @@ namespace wrj {
 										 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 										 VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
 
-		VkClearValue clearColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -56,6 +56,15 @@ namespace wrj {
 	void CommandList::setScissor(VkRect2D rect)
 	{
 		vkCmdSetScissor(m_commandBuffer, 0, 1, &rect);
+	}
+	void CommandList::bindVertexBuffer(VkBuffer vertexBuffer)
+	{
+		VkDeviceSize size = 0;
+		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &vertexBuffer, &size);
+	}
+	void CommandList::draw()
+	{
+		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
 	}
 	void CommandList::endRendering( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
 	{

@@ -26,6 +26,7 @@ namespace wrj {
 	{
 		vkDeviceWaitIdle(m_device);
 		m_pipeline.reset();
+		std::cout << "renderContext" << "\n";
 		m_upload.reset();
 		m_frameSync.reset();
 		for (auto& commandList : m_commandLists)
@@ -318,6 +319,10 @@ namespace wrj {
 	{
 		return m_pipeline->createShader(shaderCode);
 	}
+	PipelineHandle RenderContext::createGraphicsPipeline(const GraphicsPipeline& pipelineRes)
+	{
+		return m_pipeline->createGraphicsPipeline(pipelineRes,m_swapchain.image_format);
+	}
 	void RenderContext::begin(bool& swapchainDirty)
 	{
 		m_currentFrame = m_frameSync->frameBegin(m_swapchain);
@@ -352,6 +357,18 @@ namespace wrj {
 	void RenderContext::setScissor(Area2D area)
 	{
 		m_commandLists[m_currentFrame->frameIndex]->setScissor({ .offset = {area.offset.x,area.offset.y},.extent = {area.extent.width,area.extent.height} });
+	}
+	void RenderContext::bindingVertexBuffer(BufferHandle bufferHandle)
+	{
+		if (!m_resourcesPool->isBufferVaild(bufferHandle))
+		{
+			throw std::runtime_error("vertex buffer no vaild");
+		}
+		m_commandLists[m_currentFrame->frameIndex]->bindVertexBuffer(m_resourcesPool->getBuffer(bufferHandle));
+	}
+	void RenderContext::draw()
+	{
+		m_commandLists[m_currentFrame->frameIndex]->draw();
 	}
 	void RenderContext::endRendering()
 	{

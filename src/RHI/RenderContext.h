@@ -34,6 +34,7 @@ namespace wrj {
 		void recreateSwapchain(Extent2D extent);
 
 		BufferHandle createBuffer(std::uint64_t size,BufferUsage bufferUsage,MemoryProperty memoryProperty);
+		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& pipelineRes);
 		void createImage();
 
 		void copyBuffer(BufferHandle copyBuffer, const void* data, std::uint64_t dataSize);
@@ -46,6 +47,8 @@ namespace wrj {
 		void bindPipeline(PipelineHandle pipelineHandle);
 		void setViewport(Viewport viewport);
 		void setScissor(Area2D area);
+		void bindingVertexBuffer(BufferHandle bufferHandle);
+		void draw();
 		void endRendering();
 		void end(bool& swapchainDirty);
 	private:

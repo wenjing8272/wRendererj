@@ -8,6 +8,7 @@
 #include <iostream>
 #include<filesystem>
 #include<fstream>
+#include<vector>
 std::vector<std::uint32_t> readFile(std::filesystem::path shaderPath)
 {
 	std::cout << "current file directory: " << std::filesystem::current_path() << '\n';
@@ -45,27 +46,48 @@ int main()
 		renderContext.initRenderContext(initRes, windowManger.getRequiredInstanceExtensions());
 
 		auto vertices = wrj::getVertices();
-		if (vertices.empty())
-		{
-			std::cout << "empty" << '\n';
-		}
-		else
-		{
-			std::uint64_t size = sizeof(vertices[0]) * vertices.size();
-			auto stagingBufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferSrc, wrj::MemoryProperty::HostVisible);
-			renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
-			auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst, wrj::MemoryProperty::DeviceLocal);
-			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
-		}
+		
+		assert(!vertices.empty() && "vertice must has value");
+
+		std::uint64_t size = sizeof(vertices[0]) * vertices.size();
+		auto stagingBufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferSrc, wrj::MemoryProperty::HostVisible);
+		renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
+		auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst | wrj::BufferUsage::VertexBuffer, wrj::MemoryProperty::DeviceLocal);
+		renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
+
 		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
 		auto testShaderHandle = renderContext.createShader(shaderCode);
+
+		auto vertexAttribute = wrj::Vertex::vertexAttribute();
+		std::vector<wrj::DynamicState> dynamics = { wrj::DynamicState::Viewport,wrj::DynamicState::Scissor };
+
+		wrj::GraphicsPipeline test{
+			.vertexShader = testShaderHandle,
+			.fragmentShader = testShaderHandle,
+			.vertexName = "mainVert",
+			.fragmentName = "mainFrag",
+			.vertexBinding = wrj::Vertex::vertexBinding(),
+			.vertexAttribute = vertexAttribute,
+			.pushConstantRange = {.offset = 0,.size = 0},
+			.primitiveTopology = wrj::PrimitiveTopology::TriangleList,
+			.polygonMode = wrj::PolygonMode::Fill,
+			.cullMode = wrj::CullMode::Back,
+			.frontFace = wrj::FrontFace::CounterClockwise,
+			.depthBaisEnable = false,
+			.sampleCount = wrj::SampleCount::e1,
+			.blendEnable = false,
+			.dynamicStates = dynamics
+		};
+		auto testPipelinHandle = renderContext.createGraphicsPipeline(test);
+
 		while (!windowManger.windowShouldClose())
 		{
 			windowManger.closeWindowEvent();
 			windowManger.pollEvents();
+			auto framebufferSize = windowManger.getFramebufferSize();
 			if (swapchainDirty || windowManger.consumeFramebufferResized())
 			{
-				auto framebufferSize  = windowManger.getFramebufferSize();
+				
 				while (framebufferSize.width == 0 || framebufferSize.height == 0)
 				{
 					windowManger.waitEvents();
@@ -82,6 +104,11 @@ int main()
 			renderContext.begin(swapchainDirty);
 			if (swapchainDirty)continue;
 			renderContext.beginRendering();
+			renderContext.bindPipeline(testPipelinHandle);
+			renderContext.setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(framebufferSize.width),.height = static_cast<float>(framebufferSize.height),.minDepth = 0.0f,.maxDepth = 1.0f });
+			renderContext.setScissor({ .offset = {0,0},.extent = framebufferSize });
+			renderContext.bindingVertexBuffer(bufferHandle);
+			renderContext.draw();
 			renderContext.endRendering();
 			renderContext.end(swapchainDirty);
 			if (swapchainDirty)continue;

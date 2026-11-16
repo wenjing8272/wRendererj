@@ -53,6 +53,7 @@ namespace wrj {
 		B8G8R8A8_UNorm,
 		B8G8R8A8_SRGB,
 		R16G16B16A16_SFloat,
+		R32G32B32A32_SFloat,
 		R8G8_UNorm,
 		D32_SFloat
 	};
@@ -155,7 +156,7 @@ namespace wrj {
 		
 		constexpr bool isVaild()const
 		{
-			return binding != vaildValue && stride != vaildValue && stride == 0;
+			return binding != vaildValue && stride != vaildValue && stride != 0;
 		}
 	};
 
@@ -229,7 +230,7 @@ namespace wrj {
 		ShaderHandle fragmentShader{};
 		const char* vertexName = "vertMain";
 		const char* fragmentName = "fragMain";
-		std::span<VertexBinding> vertexBinding;
+		VertexBinding vertexBinding;
 		std::span<VertexAttribute> vertexAttribute;
 		PushConstantRange pushConstantRange{};
 		PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleList };

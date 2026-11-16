@@ -22,6 +22,8 @@ namespace wrj {
 		void bindGraphicsPipeline(VkPipeline pipeline);
 		void setViewport(VkViewport viewport);
 		void setScissor(VkRect2D rect);
+		void bindVertexBuffer(VkBuffer vertexBuffer);
+		void draw();
 		void endRendering(VkImage swapchainImage,VkImageView swapchainImageView,Area2D renderArea);
 		VkCommandBuffer endCommandBuffer();
 	private:

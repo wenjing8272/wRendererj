@@ -95,7 +95,7 @@ function(compile_shader target output_name)
 endfunction()
 compile_shader(test_shader_compile test_shader.spv 
                sources ${test_shader}
-               entry mainVert)
+               entry mainVert mainFrag)
 compile_shader(tt_shader_compile tt_shader.spv
                sources ${tt_shader}
                entry vertMain)

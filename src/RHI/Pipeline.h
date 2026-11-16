@@ -31,7 +31,7 @@ namespace wrj {
 		void init(VkDevice device);
 
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
-		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline);
+		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline,VkFormat format);
 
 		bool pipelineIsVaild(PipelineHandle pipelineHandle);
 		VkPipeline getPipeline(PipelineHandle);

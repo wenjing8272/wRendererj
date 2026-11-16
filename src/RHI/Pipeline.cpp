@@ -2,6 +2,7 @@
 #include"Common.h"
 
 #include<stdexcept>
+#include<iostream>
 
 namespace wrj {
 	Pipeline::~Pipeline()
@@ -10,6 +11,13 @@ namespace wrj {
 		{
 			shader.alive = false;
 			vkDestroyShaderModule(m_device, shader.shaderModule,nullptr);
+		}
+		for (auto& pipeline : m_pipelines)
+		{
+			std::cout << "pipeline" << "\n";
+			pipeline.alive = false;
+			vkDestroyPipeline(m_device, pipeline.pipeline, nullptr);
+			vkDestroyPipelineLayout(m_device, pipeline.pipelineLayout, nullptr);
 		}
 	}
 	void Pipeline::init(VkDevice device)
@@ -46,7 +54,7 @@ namespace wrj {
 		}
 		return { shaderIndex,shader.generation };
 	}
-	PipelineHandle Pipeline::createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline)
+	PipelineHandle Pipeline::createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline,VkFormat format)
 	{
 		if (graphicsPipeline.fragmentShader.index >= m_shaders.size() ||
 			graphicsPipeline.fragmentShader.generation != m_shaders[graphicsPipeline.fragmentShader.index].generation ||
@@ -61,7 +69,7 @@ namespace wrj {
 			throw std::runtime_error("vertex shader no has");
 		}
 		const auto pipelineIndex = acquireIndex(m_pipelines);
-		auto pipeline = m_pipelines[pipelineIndex];
+		auto& pipeline = m_pipelines[pipelineIndex];
 
 		VkPipelineShaderStageCreateInfo vertexShaderInfo{};
 		vertexShaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -78,25 +86,30 @@ namespace wrj {
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages = { vertexShaderInfo,fragmentShaderInfo };
 
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
-		for (const auto& i : graphicsPipeline.vertexBinding)
+
+
+		if (!graphicsPipeline.vertexBinding.isVaild())
 		{
-			if (i.isVaild())throw std::runtime_error("vertex binding no vaild");
-			auto& bindingDescription = bindingDescriptions.emplace_back();
-			bindingDescription.binding = i.binding;
-			bindingDescription.stride = i.stride;
-			if (i.isPerInstance)
-			{
-				bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-			}
-			else
-			{
-				bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-			}
+			std::cout << graphicsPipeline.vertexBinding.binding << "\n";
+			std::cout << graphicsPipeline.vertexBinding.stride << "\n";
+			throw std::runtime_error("vertex binding no vaild");
 		}
+		auto& bindingDescription = bindingDescriptions.emplace_back();
+		bindingDescription.binding = graphicsPipeline.vertexBinding.binding;
+		bindingDescription.stride = graphicsPipeline.vertexBinding.stride;
+		if (graphicsPipeline.vertexBinding.isPerInstance)
+		{
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+		}
+		else
+		{
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		}
+
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 		for (const auto& i : graphicsPipeline.vertexAttribute)
 		{
-			if (i.isVaild())throw std::runtime_error("vertex attribute no vaild");
+			if (!i.isVaild())throw std::runtime_error("vertex attribute no vaild");
 			auto& attributeDescription = attributeDescriptions.emplace_back();
 			attributeDescription.binding = i.binding;
 			attributeDescription.location = i.location;
@@ -137,6 +150,7 @@ namespace wrj {
 		rasterizationState.cullMode = userToVK(graphicsPipeline.cullMode);
 		rasterizationState.frontFace = userToVK(graphicsPipeline.frontFace);
 		rasterizationState.depthBiasEnable = userBoolToVK(graphicsPipeline.depthBaisEnable);
+		rasterizationState.lineWidth = 1.0f;
 
 		VkPipelineMultisampleStateCreateInfo multisampleState{};
 		multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -163,7 +177,11 @@ namespace wrj {
 		{
 			throw std::runtime_error("failed create pipeline layout");
 		}
-		
+		VkPipelineRenderingCreateInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		renderingInfo.colorAttachmentCount = 1;
+		renderingInfo.pColorAttachmentFormats = &format;
+
 		VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
 		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineCreateInfo.pColorBlendState = &blendState;
@@ -175,12 +193,15 @@ namespace wrj {
 		pipelineCreateInfo.pViewportState = &viewportState;
 		pipelineCreateInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
 		pipelineCreateInfo.pStages = shaderStages.data();
+		pipelineCreateInfo.layout = pipeline.pipelineLayout;
 		pipelineCreateInfo.renderPass = nullptr;
+		pipelineCreateInfo.pNext = &renderingInfo;
 
 		if (vkCreateGraphicsPipelines(m_device, {}, 1, &pipelineCreateInfo, nullptr, &pipeline.pipeline) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create graphics pipeline");
 		}
+		return { pipelineIndex,pipeline.generation };
 	}
 	VkPipeline Pipeline::getPipeline(PipelineHandle pipelineHandle)
 	{
