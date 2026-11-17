@@ -14,7 +14,6 @@ namespace wrj {
 		VkSemaphore renderFinished{ VK_NULL_HANDLE };
 		VkCommandBuffer commandBuffer{ VK_NULL_HANDLE };
 	};
-
 	struct transitionInfomation
 	{
 		VkImageLayout oldLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
@@ -24,4 +23,5 @@ namespace wrj {
 		VkPipelineStageFlags srcPipelineMask{};
 		VkPipelineStageFlags dstPipelineMask{};
 	};
+
 }

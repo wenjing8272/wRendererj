@@ -21,5 +21,7 @@ namespace wrj {
 		VkQueue m_transferQueue{ VK_NULL_HANDLE };
 
 		VkCommandBuffer m_transferCommandBuffer{ VK_NULL_HANDLE };
+
+		VkSemaphore m_transferCompletedSemaphore{ VK_NULL_HANDLE };
 	};
 }

@@ -332,10 +332,21 @@ namespace wrj {
 			return;
 		}
 	}
-	void RenderContext::beginRendering()
+	void RenderContext::beginRendering(RenderTarget renderTarget)
 	{
 		m_commandLists[m_currentFrame->frameIndex]->beginCommandBuffer();
-		m_commandLists[m_currentFrame->frameIndex]->beginRendering(m_swapchainImages[m_currentFrame->imageIndex],m_swapchainImageViews[m_currentFrame->imageIndex],m_swapchainArea);
+		if (renderTarget == RenderTarget::Swapchain)
+		{
+			m_commandLists[m_currentFrame->frameIndex]->beginRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
+		}
+		else if (renderTarget == RenderTarget::GeneralImage)
+		{
+
+		}
+		else
+		{
+			throw std::runtime_error("must configure render target");
+		}
 	}
 	void RenderContext::bindPipeline(PipelineHandle pipelineHandle)
 	{

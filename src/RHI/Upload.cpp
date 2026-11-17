@@ -3,7 +3,7 @@
 namespace wrj {
 	Upload::~Upload()
 	{
-
+		vkDestroySemaphore(m_device, m_transferCompletedSemaphore, nullptr);
 	}
 	void Upload::init(VkDevice device,VkCommandPool transferPool, VkQueue transferQueue)
 	{
@@ -18,6 +18,17 @@ namespace wrj {
 		transferCommandInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
 		vkAllocateCommandBuffers(m_device, &transferCommandInfo, &m_transferCommandBuffer);
+
+		VkSemaphoreTypeCreateInfo typeInfo{};
+		typeInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+		typeInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+		typeInfo.initialValue = 0;
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		semaphoreInfo.pNext = &typeInfo;
+
+		vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_transferCompletedSemaphore);
 	}
 	void Upload::uploadBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,VkDeviceSize bufferSize)
 	{

@@ -5,7 +5,6 @@
 namespace wrj {
 	FrameSync::~FrameSync()
 	{
-		vkDeviceWaitIdle(m_device);
 		for (auto& renderFinished : m_renderFinishedSemaphores)
 		{
 			if (renderFinished != VK_NULL_HANDLE)vkDestroySemaphore(m_device, renderFinished, nullptr);

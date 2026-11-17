@@ -224,6 +224,12 @@ namespace wrj {
 		Scissor
 	};
 
+	enum class RenderTarget
+	{
+		Swapchain,
+		GeneralImage
+	};
+
 	struct GraphicsPipeline
 	{
 		ShaderHandle vertexShader{};

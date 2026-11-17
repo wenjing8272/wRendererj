@@ -43,7 +43,7 @@ namespace wrj {
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
 
 		void begin(bool& swapchainDirty);
-		void beginRendering();
+		void beginRendering(RenderTarget renderTarget);
 		void bindPipeline(PipelineHandle pipelineHandle);
 		void setViewport(Viewport viewport);
 		void setScissor(Area2D area);

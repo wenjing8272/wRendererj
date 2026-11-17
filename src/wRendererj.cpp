@@ -103,7 +103,7 @@ int main()
 			}
 			renderContext.begin(swapchainDirty);
 			if (swapchainDirty)continue;
-			renderContext.beginRendering();
+			renderContext.beginRendering(wrj::RenderTarget::Swapchain);
 			renderContext.bindPipeline(testPipelinHandle);
 			renderContext.setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(framebufferSize.width),.height = static_cast<float>(framebufferSize.height),.minDepth = 0.0f,.maxDepth = 1.0f });
 			renderContext.setScissor({ .offset = {0,0},.extent = framebufferSize });
