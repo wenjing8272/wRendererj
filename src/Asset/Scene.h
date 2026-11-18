@@ -10,14 +10,14 @@ namespace wrj {
 		glm::vec4 position{};
 		glm::vec4 color{};
 
-		static VertexBinding vertexBinding()
+		static RHI::VertexBinding vertexBinding()
 		{
 			return { .binding = 0,.stride = sizeof(Vertex) };
 		}
-		static std::vector<VertexAttribute> vertexAttribute()
+		static std::vector<RHI::VertexAttribute> vertexAttribute()
 		{
-			return { {{.location = 0,.binding = 0,.format = Format::R32G32B32A32_SFloat,.offset = offsetof(Vertex,position)},
-					  {.location = 1,.binding = 0,.format = Format::R32G32B32A32_SFloat,.offset = offsetof(Vertex,color)}
+			return { {{.location = 0,.binding = 0,.format = RHI::Format::R32G32B32A32_SFloat,.offset = offsetof(Vertex,position)},
+					  {.location = 1,.binding = 0,.format = RHI::Format::R32G32B32A32_SFloat,.offset = offsetof(Vertex,color)}
 				} };
 		}
 	};

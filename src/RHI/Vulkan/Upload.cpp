@@ -1,6 +1,6 @@
 #include"Upload.h"
 
-namespace wrj {
+namespace RHI {
 	Upload::~Upload()
 	{
 		vkDestroySemaphore(m_device, m_transferCompletedSemaphore, nullptr);

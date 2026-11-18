@@ -5,7 +5,7 @@
 #include<limits>
 #include<span>
 
-namespace wrj {
+namespace RHI {
 	struct NativeResources
 	{
 		void* display{ nullptr };

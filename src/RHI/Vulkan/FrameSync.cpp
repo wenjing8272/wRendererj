@@ -2,7 +2,7 @@
 
 #include<stdexcept>
 
-namespace wrj {
+namespace RHI {
 	FrameSync::~FrameSync()
 	{
 		for (auto& renderFinished : m_renderFinishedSemaphores)

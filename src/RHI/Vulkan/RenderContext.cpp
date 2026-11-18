@@ -19,7 +19,7 @@
 
 #include<iostream>
 
-namespace wrj {
+namespace RHI {
 	RenderContext::RenderContext() = default;
 	// 销毁顺序必须是子对象早于它的创建者：
 	//   image views -> swapchain -> device -> surface -> instance

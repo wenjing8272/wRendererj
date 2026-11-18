@@ -1,12 +1,12 @@
 #pragma once
 #include"RenderConfig.h"
-#include"Types.h"
+#include"../Types.h"
 #include<vulkan/vulkan.h>
 
 #include<cstdint>
 #include<array>
 
-namespace wrj {
+namespace RHI {
 	class CommandList
 	{
 	public:

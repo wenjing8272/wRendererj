@@ -2,7 +2,7 @@
 //
 #include"Window/WindowManger.h"
 #include"RHI/Types.h"
-#include"RHI/RenderContext.h"
+#include"RHI/Vulkan/RenderContext.h"
 #include"Asset/Test.h"
 
 #include <iostream>
@@ -35,10 +35,10 @@ int main()
 	try {
 		bool swapchainDirty = false;
 		wrj::WindowManger windowManger(1920, 1080);
-		wrj::RenderContext renderContext;
+		RHI::RenderContext renderContext;
 		windowManger.createWindow();
 		auto initFramebufferSize = windowManger.getFramebufferSize();
-		wrj::InitResource initRes{};
+		RHI::InitResource initRes{};
 		initRes.native = windowManger.getNativeResources();
 		initRes.frameBufferWidth = initFramebufferSize.width;
 		initRes.frameBufferHeight = initFramebufferSize.height;
@@ -50,18 +50,18 @@ int main()
 		assert(!vertices.empty() && "vertice must has value");
 
 		std::uint64_t size = sizeof(vertices[0]) * vertices.size();
-		auto stagingBufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferSrc, wrj::MemoryProperty::HostVisible);
+		auto stagingBufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferSrc, RHI::MemoryProperty::HostVisible);
 		renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
-		auto bufferHandle = renderContext.createBuffer(size, wrj::BufferUsage::TransferDst | wrj::BufferUsage::VertexBuffer, wrj::MemoryProperty::DeviceLocal);
+		auto bufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
 		renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
 
 		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
 		auto testShaderHandle = renderContext.createShader(shaderCode);
 
 		auto vertexAttribute = wrj::Vertex::vertexAttribute();
-		std::vector<wrj::DynamicState> dynamics = { wrj::DynamicState::Viewport,wrj::DynamicState::Scissor };
+		std::vector<RHI::DynamicState> dynamics = { RHI::DynamicState::Viewport,RHI::DynamicState::Scissor };
 
-		wrj::GraphicsPipeline test{
+		RHI::GraphicsPipeline test{
 			.vertexShader = testShaderHandle,
 			.fragmentShader = testShaderHandle,
 			.vertexName = "mainVert",
@@ -69,12 +69,12 @@ int main()
 			.vertexBinding = wrj::Vertex::vertexBinding(),
 			.vertexAttribute = vertexAttribute,
 			.pushConstantRange = {.offset = 0,.size = 0},
-			.primitiveTopology = wrj::PrimitiveTopology::TriangleList,
-			.polygonMode = wrj::PolygonMode::Fill,
-			.cullMode = wrj::CullMode::Back,
-			.frontFace = wrj::FrontFace::CounterClockwise,
+			.primitiveTopology = RHI::PrimitiveTopology::TriangleList,
+			.polygonMode = RHI::PolygonMode::Fill,
+			.cullMode = RHI::CullMode::Back,
+			.frontFace = RHI::FrontFace::CounterClockwise,
 			.depthBaisEnable = false,
-			.sampleCount = wrj::SampleCount::e1,
+			.sampleCount = RHI::SampleCount::e1,
 			.blendEnable = false,
 			.dynamicStates = dynamics,
 			.debugName = "testPipeline"
@@ -104,7 +104,7 @@ int main()
 			}
 			renderContext.begin(swapchainDirty);
 			if (swapchainDirty)continue;
-			renderContext.beginRendering(wrj::RenderTarget::Swapchain);
+			renderContext.beginRendering(RHI::RenderTarget::Swapchain);
 			renderContext.bindPipeline(testPipelinHandle);
 			renderContext.setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(framebufferSize.width),.height = static_cast<float>(framebufferSize.height),.minDepth = 0.0f,.maxDepth = 1.0f });
 			renderContext.setScissor({ .offset = {0,0},.extent = framebufferSize });
@@ -120,5 +120,5 @@ int main()
 		std::cerr << "Exception: " << e.what() << std::endl;
 		return -1;
 	}
-    return 0;
+	return 0;
 }

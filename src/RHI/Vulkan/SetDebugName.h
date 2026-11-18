@@ -1,7 +1,7 @@
 #pragma once
 #include<vulkan/vulkan.h>
 
-namespace wrj {
+namespace RHI {
 
 	class DebugName {
 	public:

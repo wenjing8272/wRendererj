@@ -1,6 +1,6 @@
 #include"Common.h"
 
-namespace wrj {
+namespace RHI {
 	VkBufferUsageFlags userToVK(BufferUsage bufferUsage)
 	{
 		VkBufferUsageFlags result{};

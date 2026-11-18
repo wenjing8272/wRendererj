@@ -17,12 +17,12 @@ namespace wrj {
 		WindowManger(WindowManger&& otherWindowManger) = delete;
 		WindowManger& operator=(WindowManger&& otherWindowManger) = delete;
 		void createWindow();
-		const NativeResources getNativeResources()const;
+		const RHI::NativeResources getNativeResources()const;
 		const std::vector<std::string> getRequiredInstanceExtensions()const;
 		void closeWindowEvent();
 		const bool windowShouldClose()const;
 		void pollEvents()const;
-		const Extent2D getFramebufferSize()const;
+		const RHI::Extent2D getFramebufferSize()const;
 		const bool consumeFramebufferResized();
 		void waitEvents()const;
 	private:

@@ -1,6 +1,6 @@
 #pragma once
 #include"RenderConfig.h"
-#include"Types.h"
+#include"../Types.h"
 #include<VkBootstrap.h>
 #include<vulkan/vulkan.h>
 #include<vma/vk_mem_alloc.h>
@@ -11,7 +11,7 @@
 #include<array>
 #include<optional>
 
-namespace wrj {
+namespace RHI {
 	class FrameSync;
 
 	class CommandList;

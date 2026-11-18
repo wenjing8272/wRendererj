@@ -6,7 +6,7 @@
 #include<array>
 #include<optional>
 
-namespace wrj {
+namespace RHI {
 	class FrameSync {
 	public:
 		FrameSync() = default;

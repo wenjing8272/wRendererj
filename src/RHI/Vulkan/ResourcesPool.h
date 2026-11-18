@@ -1,11 +1,11 @@
 #pragma once
 #include<vulkan/vulkan.h>
 #include<vma/vk_mem_alloc.h>
-#include"Types.h"
+#include"../Types.h"
 
 #include<vector>
 
-namespace wrj {
+namespace RHI {
 	struct BufferRecord
 	{
 		VkBuffer buffer{ VK_NULL_HANDLE };

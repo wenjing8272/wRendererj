@@ -1,10 +1,10 @@
 #pragma once
 #include<vulkan/vulkan.h>
-#include"Types.h"
+#include"../Types.h"
 
 #include<vector>
 
-namespace wrj {
+namespace RHI {
 	struct ShaderRecord 
 	{
 		VkShaderModule shaderModule{ VK_NULL_HANDLE };

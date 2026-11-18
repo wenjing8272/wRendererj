@@ -3,7 +3,7 @@
 #include<cassert>
 #include<stdexcept>
 
-namespace wrj {
+namespace RHI {
 	ResourcesPool::~ResourcesPool()
 	{
 		for (auto& buffer : m_buffers)

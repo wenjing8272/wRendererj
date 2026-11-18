@@ -31,13 +31,13 @@ namespace wrj {
 		glfwSetWindowUserPointer(m_window, this);
 		glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
 	}
-	const NativeResources WindowManger::getNativeResources() const
+	const RHI::NativeResources WindowManger::getNativeResources() const
 	{
 		if (!m_isWindowCreated)
 		{
 			throw std::runtime_error("Window has not been created yet");
 		}
-		NativeResources native;
+		RHI::NativeResources native;
 		native.display = GetModuleHandle(nullptr);
 		native.window = glfwGetWin32Window(m_window);
 		return native;
@@ -72,7 +72,7 @@ namespace wrj {
 	{
 		glfwPollEvents();
 	}
-	const Extent2D WindowManger::getFramebufferSize() const
+	const RHI::Extent2D WindowManger::getFramebufferSize() const
 	{
 		int width, height;
 		glfwGetFramebufferSize(m_window, &width, &height);

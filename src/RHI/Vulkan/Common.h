@@ -1,8 +1,8 @@
 #pragma once
 #include<vulkan/vulkan.h>
-#include"Types.h"
+#include"../Types.h"
 
-namespace wrj {
+namespace RHI {
 	VkBufferUsageFlags userToVK(BufferUsage bufferUsage);
 	VkMemoryPropertyFlags userToVK(MemoryProperty memoryUsage);
 	VkFormat userToVK(Format format);

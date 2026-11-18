@@ -6,7 +6,7 @@
 #include<stdexcept>
 #include<iostream>
 
-namespace wrj {
+namespace RHI {
 	Pipeline::~Pipeline()
 	{
 		for (auto& shader : m_shaders)
