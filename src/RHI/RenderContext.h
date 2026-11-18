@@ -53,12 +53,19 @@ namespace wrj {
 		void end(bool& swapchainDirty);
 	private:
 		void initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
+#ifndef NDEBUG
+		void setDebugName(std::uint64_t vkHandle,const char* debugName);
+#endif // !NDEBUG
 
 		vkb::Instance m_instance;
 		// 必须初始化为空句柄：initRenderContext 中途失败时析构函数仍会执行销毁逻辑
 		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 		vkb::PhysicalDevice m_physicalDevice;
 		vkb::Device m_device;
+#ifndef NDEBUG
+		PFN_vkSetDebugUtilsObjectNameEXT m_vkSetDebugUtilsObjectNameEXT{ nullptr };
+#endif // !
+
 		vkb::Swapchain m_swapchain;
 		// 这些 VkImage 归交换链所有，不要手动销毁
 		std::vector<VkImage> m_swapchainImages;

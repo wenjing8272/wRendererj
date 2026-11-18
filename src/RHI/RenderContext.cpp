@@ -164,6 +164,12 @@ namespace wrj {
 		}
 		m_device = deviceResult.value();
 
+		//在debug构建下，取出配置debug name 的函数指针
+#ifndef NDEBUG
+		m_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT");
+#endif // !NDEBUG
+
+		//创建vma allocator
 		VmaAllocatorCreateInfo allocatorInfo{};
 		allocatorInfo.instance = m_instance;
 		allocatorInfo.physicalDevice = m_physicalDevice;
@@ -234,7 +240,7 @@ namespace wrj {
 		m_transferQueueFamlily = m_device.get_queue_index(vkb::QueueType::transfer).value();
 
 		VkCommandPoolCreateInfo transferInfo{};
-		transferInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		transferInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		transferInfo.queueFamilyIndex = m_transferQueueFamlily;
 		transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
@@ -257,11 +263,29 @@ namespace wrj {
 		computeInfo.queueFamilyIndex = m_computeQueueFamlily;
 		computeInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
-		if (vkCreateCommandPool(m_device, &commandPoolInfo, nullptr, &m_computePool) != VK_SUCCESS)
+		if (vkCreateCommandPool(m_device, &computeInfo, nullptr, &m_computePool) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create compute command pool");
 		}
 	}
+#ifndef NDEBUG
+	void RenderContext::setDebugName(std::uint64_t vkHandle, const char* debugName)
+	{
+		VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+		info.objectHandle = vkHandle;
+		info.objectType = VK_OBJECT_TYPE_BUFFER;
+		info.pObjectName = debugName;
+
+		if (m_vkSetDebugUtilsObjectNameEXT)
+		{
+			m_vkSetDebugUtilsObjectNameEXT(m_device, &info);
+		}
+		else
+		{
+			std::cout << "failed to load vkSetDebugUtilsObjectNameEXT" << '\n';
+		}
+	}
+#endif // !NDEBUG
 	void RenderContext::recreateSwapchain(Extent2D extent)
 	{
 		vkQueueWaitIdle(m_graphicsQueue);

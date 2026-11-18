@@ -61,6 +61,7 @@ namespace wrj {
 		auto result = vmaCreateBuffer(m_allocator, &bufferInfo, &allocationCreateInfo, &bufferRecord.buffer, &bufferRecord.allocation, &allocationInfo);
 		if (result != VK_SUCCESS)
 		{
+			bufferRecord.alive = false;
 			throw std::runtime_error("failed to create buffer");
 		}
 		bufferRecord.mapped = allocationInfo.pMappedData;
@@ -92,7 +93,7 @@ namespace wrj {
 	void ResourcesPool::destoryBuffer(BufferHandle bufferHandle)
 	{
 		if (!isBufferVaild(bufferHandle))return;
-		auto buffer = m_buffers[bufferHandle.index];
+		auto& buffer = m_buffers[bufferHandle.index];
 		vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
 		buffer.alive = false;
 		buffer.buffer = VK_NULL_HANDLE;

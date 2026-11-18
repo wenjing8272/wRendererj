@@ -17,7 +17,6 @@ find_package(Vulkan REQUIRED)
 
 add_library(vma STATIC external/VMA/vk_mem_alloc.cpp)
 
-find_package(Vulkan REQUIRED)
 if(NOT SLANGC_EXECUTABLE)
     find_program(SLANGC_EXECUTABLE slangc HINTS "${Vulkan_SDK_PATH}/bin" "$ENV{VULKAN_SDK}/bin")
 endif()
