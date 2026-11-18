@@ -247,5 +247,6 @@ namespace wrj {
 		SampleCount sampleCount{ SampleCount::e1 };
 		bool blendEnable{ false };
 		std::span<DynamicState> dynamicStates;
+		const char* debugName = "";
 	};
 }

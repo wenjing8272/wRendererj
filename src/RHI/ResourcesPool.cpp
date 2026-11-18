@@ -73,7 +73,7 @@ namespace wrj {
 	void ResourcesPool::copyBuffer(BufferHandle copyBuffer, const void* data, VkDeviceSize dataSize)
 	{
 		auto& buffer = m_buffers[copyBuffer.index];
-		assert(dataSize == buffer.size && buffer.alive && buffer.generation == copyBuffer.generation, "buffer has not vailde");
+		assert(dataSize == buffer.size && buffer.alive && buffer.generation == copyBuffer.generation && "buffer has not vailde");
 		if (buffer.mapped == nullptr)
 		{
 			throw std::runtime_error("no mapped memory");

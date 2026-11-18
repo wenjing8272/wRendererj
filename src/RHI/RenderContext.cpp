@@ -13,6 +13,9 @@
 #include"Upload.h"
 #include"Pipeline.h"
 #include"Common.h"
+#ifndef NDEBUG
+#include"SetDebugName.h"
+#endif // !NDEBUG
 
 #include<iostream>
 
@@ -164,10 +167,8 @@ namespace wrj {
 		}
 		m_device = deviceResult.value();
 
-		//在debug构建下，取出配置debug name 的函数指针
-#ifndef NDEBUG
-		m_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT");
-#endif // !NDEBUG
+		//初始化配置debug name函数，在DebugName里面创建配置PFN_vkSetDebugUtilsObjectNameEXT函数指针
+		DebugName::init(m_device);
 
 		//创建vma allocator
 		VmaAllocatorCreateInfo allocatorInfo{};
@@ -268,24 +269,6 @@ namespace wrj {
 			throw std::runtime_error("Failed to create compute command pool");
 		}
 	}
-#ifndef NDEBUG
-	void RenderContext::setDebugName(std::uint64_t vkHandle, const char* debugName)
-	{
-		VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
-		info.objectHandle = vkHandle;
-		info.objectType = VK_OBJECT_TYPE_BUFFER;
-		info.pObjectName = debugName;
-
-		if (m_vkSetDebugUtilsObjectNameEXT)
-		{
-			m_vkSetDebugUtilsObjectNameEXT(m_device, &info);
-		}
-		else
-		{
-			std::cout << "failed to load vkSetDebugUtilsObjectNameEXT" << '\n';
-		}
-	}
-#endif // !NDEBUG
 	void RenderContext::recreateSwapchain(Extent2D extent)
 	{
 		vkQueueWaitIdle(m_graphicsQueue);

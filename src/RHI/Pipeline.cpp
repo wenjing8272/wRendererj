@@ -1,6 +1,8 @@
 #include"Pipeline.h"
 #include"Common.h"
 
+#include"SetDebugName.h"
+
 #include<stdexcept>
 #include<iostream>
 
@@ -201,6 +203,8 @@ namespace wrj {
 		{
 			throw std::runtime_error("failed to create graphics pipeline");
 		}
+		DebugName::set(pipeline.pipelineLayout, graphicsPipeline.debugName);
+		DebugName::set(pipeline.pipeline, graphicsPipeline.debugName);
 		return { pipelineIndex,pipeline.generation };
 	}
 	VkPipeline Pipeline::getPipeline(PipelineHandle pipelineHandle)

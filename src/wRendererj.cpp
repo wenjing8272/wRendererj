@@ -76,7 +76,8 @@ int main()
 			.depthBaisEnable = false,
 			.sampleCount = wrj::SampleCount::e1,
 			.blendEnable = false,
-			.dynamicStates = dynamics
+			.dynamicStates = dynamics,
+			.debugName = "testPipeline"
 		};
 		auto testPipelinHandle = renderContext.createGraphicsPipeline(test);
 
