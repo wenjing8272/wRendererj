@@ -7,16 +7,16 @@
 #include<array>
 
 namespace RHI {
-	class CommandList
+	class CommandBuffer
 	{
 	public:
-		CommandList();
-		~CommandList();
-		CommandList(const CommandList& otherCommandList) = delete;
-		CommandList& operator=(const CommandList& otherCommandList) = delete;
-		CommandList(CommandList&& otherCommandList) = delete;
-		CommandList& operator=(CommandList&& otherCommandList) = delete;
-		void initCommandList(VkDevice device,std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer);
+		CommandBuffer();
+		~CommandBuffer();
+		CommandBuffer(const CommandBuffer& otherCommandBuffer) = delete;
+		CommandBuffer& operator=(const CommandBuffer& otherCommandList) = delete;
+		CommandBuffer(CommandBuffer&& otherCommandList) = delete;
+		CommandBuffer& operator=(CommandBuffer&& otherCommandList) = delete;
+		void initCommandBuffer(VkDevice device,std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer);
 		void beginCommandBuffer();
 		void beginRendering(VkImage swapchainImage, VkImageView swapchainImageView, Area2D renderArea);
 		void bindGraphicsPipeline(VkPipeline pipeline);

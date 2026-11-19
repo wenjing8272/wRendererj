@@ -7,6 +7,7 @@
 namespace wrj {
 	WindowManger::WindowManger(std::uint32_t width, std::uint32_t height) : m_width(width), m_height(height)
 	{
+
 	}
 	WindowManger::~WindowManger()
 	{

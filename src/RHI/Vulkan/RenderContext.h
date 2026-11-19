@@ -14,7 +14,7 @@
 namespace RHI {
 	class FrameSync;
 
-	class CommandList;
+	class CommandBuffer;
 
 	class ResourcesPool;
 
@@ -83,7 +83,7 @@ namespace RHI {
 		std::unique_ptr<FrameSync> m_frameSync{ nullptr };
 		std::optional<FrameResources> m_currentFrame;
 
-		std::vector<std::unique_ptr<CommandList>> m_commandLists;
+		std::vector<std::unique_ptr<CommandBuffer>> m_commandBuffers;
 		
 		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
 

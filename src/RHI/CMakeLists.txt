@@ -8,11 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(${PROJECT_NAME} STATIC
     Vulkan/RenderContext.cpp
     Vulkan/FrameSync.cpp
-    Vulkan/CommandList.cpp
+    Vulkan/CommandBuffer.cpp
     Vulkan/ResourcesPool.cpp
     Vulkan/Common.cpp
     Vulkan/Upload.cpp
     Vulkan/Pipeline.cpp
+    Vulkan/VulkanPass.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

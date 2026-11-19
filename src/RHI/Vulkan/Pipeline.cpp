@@ -149,8 +149,8 @@ namespace RHI {
 		rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizationState.depthClampEnable = VK_FALSE;
 		rasterizationState.rasterizerDiscardEnable = VK_FALSE;
-		rasterizationState.cullMode = userToVK(graphicsPipeline.cullMode);
-		rasterizationState.frontFace = userToVK(graphicsPipeline.frontFace);
+		rasterizationState.cullMode = userToVK(graphicsPipeline.rasterizer.cullMode);
+		rasterizationState.frontFace = userToVK(graphicsPipeline.rasterizer.frontFace);
 		rasterizationState.depthBiasEnable = userBoolToVK(graphicsPipeline.depthBaisEnable);
 		rasterizationState.lineWidth = 1.0f;
 

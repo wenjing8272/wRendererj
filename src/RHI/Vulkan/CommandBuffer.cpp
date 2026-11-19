@@ -1,25 +1,24 @@
-#include"CommandList.h"
+#include"CommandBuffer.h"
 
 namespace RHI {
-	CommandList::CommandList() = default;
-	CommandList::~CommandList()
+	CommandBuffer::CommandBuffer() = default;
+	CommandBuffer::~CommandBuffer()
 	{
-
 	}
-	void CommandList::initCommandList(VkDevice device, std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer)
+	void CommandBuffer::initCommandBuffer(VkDevice device, std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer)
 	{
 		m_device = device;
 		m_graphicsQueueFamlily = graphicsQueueFamlily;
 		m_commandBuffer = commandBuffer;
 	}
-	void CommandList::beginCommandBuffer()
+	void CommandBuffer::beginCommandBuffer()
 	{
 		vkResetCommandBuffer(m_commandBuffer, 0);
 		VkCommandBufferBeginInfo commandBufferBeginInfo{};
 		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		vkBeginCommandBuffer(m_commandBuffer, &commandBufferBeginInfo);
 	}
-	void CommandList::beginRendering(VkImage swapchainImage, VkImageView swapchainImageView, Area2D renderArea)
+	void CommandBuffer::beginRendering(VkImage swapchainImage, VkImageView swapchainImageView, Area2D renderArea)
 	{
 		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 										 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -45,28 +44,28 @@ namespace RHI {
 
 		vkCmdBeginRendering(m_commandBuffer, &renderingInfo);
 	}
-	void CommandList::bindGraphicsPipeline(VkPipeline pipeline)
+	void CommandBuffer::bindGraphicsPipeline(VkPipeline pipeline)
 	{
 		vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
-	void CommandList::setViewport(VkViewport viewport)
+	void CommandBuffer::setViewport(VkViewport viewport)
 	{
 		vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
 	}
-	void CommandList::setScissor(VkRect2D rect)
+	void CommandBuffer::setScissor(VkRect2D rect)
 	{
 		vkCmdSetScissor(m_commandBuffer, 0, 1, &rect);
 	}
-	void CommandList::bindVertexBuffer(VkBuffer vertexBuffer)
+	void CommandBuffer::bindVertexBuffer(VkBuffer vertexBuffer)
 	{
 		VkDeviceSize size = 0;
 		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &vertexBuffer, &size);
 	}
-	void CommandList::draw()
+	void CommandBuffer::draw()
 	{
 		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
 	}
-	void CommandList::endRendering( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
+	void CommandBuffer::endRendering( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
 	{
 		
 		vkCmdEndRendering(m_commandBuffer);
@@ -76,12 +75,12 @@ namespace RHI {
 												 VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
 
 	}
-	VkCommandBuffer CommandList::endCommandBuffer()
+	VkCommandBuffer CommandBuffer::endCommandBuffer()
 	{
 		vkEndCommandBuffer(m_commandBuffer);
 		return m_commandBuffer;
 	}
-	void CommandList::transitionBufferRecord(VkImage buffer,const transitionInfomation& transInfo)
+	void CommandBuffer::transitionBufferRecord(VkImage buffer,const transitionInfomation& transInfo)
 	{
 		VkImageMemoryBarrier2 barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;

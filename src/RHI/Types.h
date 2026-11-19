@@ -6,6 +6,8 @@
 #include<span>
 
 namespace RHI {
+	//configure to create swap chain,display and window is window system provide a pointer,in vulkan,by window.h require window handle 
+	//to create vkSurface,next to create vkSwapchain
 	struct NativeResources
 	{
 		void* display{ nullptr };
@@ -20,6 +22,7 @@ namespace RHI {
 		const char* appName = "wRenderj";
 	};
 
+	//image basic parampter Offset2D(position of origin) Extent2D(pixel size of image)
 	struct Offset2D
 	{
 		std::int32_t x{ 0 };
@@ -45,6 +48,8 @@ namespace RHI {
 		float minDepth{ 0.0f };
 		float maxDepth{ 1.0f };
 	};
+
+	//data format
 	enum class Format 
 	{
 		Undefined,
@@ -57,6 +62,8 @@ namespace RHI {
 		R8G8_UNorm,
 		D32_SFloat
 	};
+
+
 	enum class BufferUsage:std::uint32_t
 	{
 		None = 0,
@@ -211,6 +218,12 @@ namespace RHI {
 		CounterClockwise
 	};
 
+	struct Rasterizer {
+		PolygonMode polygonMode{ PolygonMode::Fill };
+		CullMode cullMode{ CullMode::Back };
+		FrontFace frontFace{ FrontFace::CounterClockwise };
+	};
+
 	enum class SampleCount
 	{
 		e1,
@@ -240,13 +253,11 @@ namespace RHI {
 		std::span<VertexAttribute> vertexAttribute;
 		PushConstantRange pushConstantRange{};
 		PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleList };
-		PolygonMode polygonMode{ PolygonMode::Fill };
-		CullMode cullMode{ CullMode::Back };
-		FrontFace frontFace{ FrontFace::Clockwise };
+		Rasterizer rasterizer;
 		bool depthBaisEnable{ false };
 		SampleCount sampleCount{ SampleCount::e1 };
 		bool blendEnable{ false };
 		std::span<DynamicState> dynamicStates;
-		const char* debugName = "";
+		const char* debugName = "graphicsPipeline";
 	};
 }

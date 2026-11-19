@@ -8,7 +8,7 @@
 // 上面的宏必须先于这个包含，vulkan.h 才会再引入 vulkan_win32.h。
 #include"RenderContext.h"
 #include"FrameSync.h"
-#include"CommandList.h"
+#include"CommandBuffer.h"
 #include"ResourcesPool.h"
 #include"Upload.h"
 #include"Pipeline.h"
@@ -32,7 +32,7 @@ namespace RHI {
 		std::cout << "renderContext" << "\n";
 		m_upload.reset();
 		m_frameSync.reset();
-		for (auto& commandList : m_commandLists)
+		for (auto& commandList : m_commandBuffers)
 		{
 			commandList.reset();
 		}
@@ -68,11 +68,11 @@ namespace RHI {
 			throw std::runtime_error("vkAllocateCommandBuffers failed");
 		}
 
-		m_commandLists.resize(MAX_FRAMES_IN_FLIGHT);
+		m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 		for (size_t i = 0;i < MAX_FRAMES_IN_FLIGHT;++i)
 		{
-			m_commandLists[i] = std::make_unique<CommandList>();
-			m_commandLists[i]->initCommandList(m_device, m_graphicsQueueFamlily, buffers[i]);
+			m_commandBuffers[i] = std::make_unique<CommandBuffer>();
+			m_commandBuffers[i]->initCommandBuffer(m_device, m_graphicsQueueFamlily, buffers[i]);
 		}
 
 		m_resourcesPool = std::make_unique<ResourcesPool>();
@@ -89,8 +89,7 @@ namespace RHI {
 	{
 		// ---------- 1. 创建 VkInstance ----------
 		// Instance 是整个 Vulkan 上下文的根对象，surface、physical device、device
-		// 都挂在它下面。require_api_version(1,3,0) 表示我们只使用 1.3 的核心能力
-		// （dynamic rendering、synchronization2 等，但它们是否启用还要单独开 feature）。
+		// 都挂在它下面,require_api_version(1,3,0) 
 		vkb::InstanceBuilder instanceBuilder;
 		instanceBuilder.set_app_name(initRes.appName)
 			.set_engine_name(initRes.appName)
@@ -341,10 +340,10 @@ namespace RHI {
 	}
 	void RenderContext::beginRendering(RenderTarget renderTarget)
 	{
-		m_commandLists[m_currentFrame->frameIndex]->beginCommandBuffer();
+		m_commandBuffers[m_currentFrame->frameIndex]->beginCommandBuffer();
 		if (renderTarget == RenderTarget::Swapchain)
 		{
-			m_commandLists[m_currentFrame->frameIndex]->beginRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
+			m_commandBuffers[m_currentFrame->frameIndex]->beginRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
 		}
 		else if (renderTarget == RenderTarget::GeneralImage)
 		{
@@ -361,11 +360,11 @@ namespace RHI {
 		{
 			throw std::runtime_error("pipeline no vaild");
 		}
-		m_commandLists[m_currentFrame->frameIndex]->bindGraphicsPipeline(m_pipeline->getPipeline(pipelineHandle));
+		m_commandBuffers[m_currentFrame->frameIndex]->bindGraphicsPipeline(m_pipeline->getPipeline(pipelineHandle));
 	}
 	void RenderContext::setViewport(Viewport viewport)
 	{
-		m_commandLists[m_currentFrame->frameIndex]->setViewport({ viewport.x,
+		m_commandBuffers[m_currentFrame->frameIndex]->setViewport({ viewport.x,
 																  viewport.y,
 																  viewport.width,
 																  viewport.height,
@@ -374,7 +373,7 @@ namespace RHI {
 	}
 	void RenderContext::setScissor(Area2D area)
 	{
-		m_commandLists[m_currentFrame->frameIndex]->setScissor({ .offset = {area.offset.x,area.offset.y},.extent = {area.extent.width,area.extent.height} });
+		m_commandBuffers[m_currentFrame->frameIndex]->setScissor({ .offset = {area.offset.x,area.offset.y},.extent = {area.extent.width,area.extent.height} });
 	}
 	void RenderContext::bindingVertexBuffer(BufferHandle bufferHandle)
 	{
@@ -382,16 +381,16 @@ namespace RHI {
 		{
 			throw std::runtime_error("vertex buffer no vaild");
 		}
-		m_commandLists[m_currentFrame->frameIndex]->bindVertexBuffer(m_resourcesPool->getBuffer(bufferHandle));
+		m_commandBuffers[m_currentFrame->frameIndex]->bindVertexBuffer(m_resourcesPool->getBuffer(bufferHandle));
 	}
 	void RenderContext::draw()
 	{
-		m_commandLists[m_currentFrame->frameIndex]->draw();
+		m_commandBuffers[m_currentFrame->frameIndex]->draw();
 	}
 	void RenderContext::endRendering()
 	{
-		m_commandLists[m_currentFrame->frameIndex]->endRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
-		auto commandBuffer = m_commandLists[m_currentFrame->frameIndex]->endCommandBuffer();
+		m_commandBuffers[m_currentFrame->frameIndex]->endRendering(m_swapchainImages[m_currentFrame->imageIndex], m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
+		auto commandBuffer = m_commandBuffers[m_currentFrame->frameIndex]->endCommandBuffer();
 		m_currentFrame->commandBuffer = commandBuffer;
 	}
 	void RenderContext::end(bool& swapchainDirty)
