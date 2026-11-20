@@ -1,7 +1,6 @@
 #include"Pipeline.h"
-#include"Common.h"
 
-#include"SetDebugName.h"
+#include"Common.hpp"
 
 #include<stdexcept>
 #include<iostream>
@@ -25,21 +24,6 @@ namespace RHI {
 	void Pipeline::init(VkDevice device)
 	{
 		m_device = device;
-	}
-	template<class Record>
-	std::uint32_t Pipeline::acquireIndex(std::vector<Record>& records)
-	{
-		for (std::uint32_t i = 0;i < records.size();++i)
-		{
-			if (records[i].alive)continue;
-			records[i].alive = true;
-			records[i].generation += 1;
-			return i;
-		}
-		auto& record = records.emplace_back();
-		record.alive = true;
-		record.generation = 1;
-		return static_cast<std::uint32_t>(records.size() - 1);
 	}
 	ShaderHandle Pipeline::createShader(const std::vector<std::uint32_t>& shaderCode)
 	{

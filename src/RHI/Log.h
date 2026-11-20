@@ -1,4 +1,5 @@
 #pragma once
 #include<cstdio>
 
-#define LOG_INFO(fmt,...) printf("%s:%d% %s",fmt,"\n",__FILE__,__LINE__,__func__,##__AV_ARGS__) 
+#define LOG_INFO(...) std::printf(__VA_ARGS__) 
+#define LOG_WARN(...) std::fprintf(stderr,"warn: " __VA_ARGS__)

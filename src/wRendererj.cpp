@@ -54,7 +54,7 @@ int main()
 		renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
 		auto bufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
 		renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
-
+		renderContext.destoryBuffer(stagingBufferHandle);
 		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
 		auto testShaderHandle = renderContext.createShader(shaderCode);
 

@@ -37,8 +37,6 @@ namespace RHI {
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 		void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	private:
-		template<class Record>
-		std::uint32_t acquireIndex(std::vector<Record>& buffers);
 		VkDevice m_device{ VK_NULL_HANDLE };
 		VkCommandPool m_commandPool{ VK_NULL_HANDLE };
 		VkQueue m_graphicsQueue{ VK_NULL_HANDLE };

@@ -37,6 +37,8 @@ namespace RHI {
 		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& pipelineRes);
 		void createImage();
 
+		void destoryBuffer(BufferHandle bufferHandle);
+
 		void copyBuffer(BufferHandle copyBuffer, const void* data, std::uint64_t dataSize);
 		void uploadBuffer(BufferHandle srcBufferHandle, BufferHandle dstBufferHandle,std::uint64_t bufferSize);
 

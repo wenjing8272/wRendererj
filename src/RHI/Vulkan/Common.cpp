@@ -1,4 +1,4 @@
-#include"Common.h"
+#include"Common.hpp"
 
 namespace RHI {
 	VkBufferUsageFlags userToVK(BufferUsage bufferUsage)
@@ -21,6 +21,9 @@ namespace RHI {
 		case MemoryProperty::HostVisible:
 			return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		case MemoryProperty::DeviceLocal:
+			return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		default:
+			LOG_WARN("memory property choose default property");
 			return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		}
 	}
@@ -46,6 +49,9 @@ namespace RHI {
 			return VK_FORMAT_D32_SFLOAT;
 		case Format::Undefined:
 			return VK_FORMAT_UNDEFINED;
+		default:
+			LOG_WARN("format choose default format: r8g8b8a8srgb");
+			return VK_FORMAT_R8G8B8A8_SRGB;
 		}
 	}
 	VkPrimitiveTopology userToVK(PrimitiveTopology topology)
@@ -58,6 +64,9 @@ namespace RHI {
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		case PrimitiveTopology::TriangleStrip:
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		default:
+			LOG_WARN("topology use default: trangle list");
+			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		}
 	}
 	VkDynamicState userToVK(DynamicState dynamic)
@@ -68,6 +77,9 @@ namespace RHI {
 			return VK_DYNAMIC_STATE_VIEWPORT;
 		case DynamicState::Scissor:
 			return VK_DYNAMIC_STATE_SCISSOR;
+		default:
+			LOG_WARN("dynamic default use: viewport");
+			return VK_DYNAMIC_STATE_VIEWPORT;
 		}
 	}
 	VkCullModeFlags userToVK(CullMode cullMode)
@@ -77,6 +89,9 @@ namespace RHI {
 		case CullMode::Front:
 			return VK_CULL_MODE_FRONT_BIT;
 		case CullMode::Back:
+			return VK_CULL_MODE_BACK_BIT;
+		default:
+			LOG_WARN("cull mode default use: back");
 			return VK_CULL_MODE_BACK_BIT;
 		}
 	}
@@ -88,6 +103,9 @@ namespace RHI {
 			return VK_FRONT_FACE_CLOCKWISE;
 		case FrontFace::CounterClockwise:
 			return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		default:
+			LOG_WARN("front face default use: clockwise");
+			return VK_FRONT_FACE_CLOCKWISE;
 		}
 	}
 	VkSampleCountFlagBits userToVK(SampleCount sampleCount)
@@ -100,6 +118,9 @@ namespace RHI {
 			return VK_SAMPLE_COUNT_4_BIT;
 		case SampleCount::e16:
 			return VK_SAMPLE_COUNT_16_BIT;
+		default:
+			LOG_WARN("sample count default use: 1");
+			return VK_SAMPLE_COUNT_1_BIT;
 		}
 	}
 	VkBool32 userBoolToVK(bool user)

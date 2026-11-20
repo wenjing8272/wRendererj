@@ -23,5 +23,4 @@ namespace RHI {
 		VkPipelineStageFlags srcPipelineMask{};
 		VkPipelineStageFlags dstPipelineMask{};
 	};
-
 }

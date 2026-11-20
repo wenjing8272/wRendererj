@@ -36,8 +36,6 @@ namespace RHI {
 		bool pipelineIsVaild(PipelineHandle pipelineHandle);
 		VkPipeline getPipeline(PipelineHandle);
 	private:
-		template<class Record>
-		std::uint32_t acquireIndex(std::vector<Record>& record);
 		VkDevice m_device{ VK_NULL_HANDLE };
 
 		std::vector<ShaderRecord> m_shaders;

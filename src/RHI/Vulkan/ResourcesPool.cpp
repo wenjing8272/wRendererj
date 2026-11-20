@@ -1,4 +1,5 @@
 #include"ResourcesPool.h"
+#include"Common.hpp"
 
 #include<cassert>
 #include<stdexcept>
@@ -18,21 +19,6 @@ namespace RHI {
 		m_commandPool = commandPool;
 		m_graphicsQueue = graphicsQueue;
 		m_allocator = allocator;
-	}
-	template<class Record>
-	std::uint32_t ResourcesPool::acquireIndex(std::vector<Record>& buffers)
-	{
-		for (size_t i = 0;i < buffers.size();++i)
-		{
-			if (buffers[i].alive)continue;
-			buffers[i].alive = true;
-			buffers[i].generation += 1;
-			return static_cast<std::uint32_t>(i);
-		}
-		auto& buffer = buffers.emplace_back();    //C++17以后emplace_back直接返回引用
-		buffer.alive = true;
-		buffer.generation = 1;
-		return static_cast<std::uint32_t>(buffers.size() - 1);
 	}
 
 	BufferHandle ResourcesPool::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
