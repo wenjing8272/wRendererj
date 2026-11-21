@@ -22,6 +22,8 @@ namespace RHI {
 
 	class Pipeline;
 
+  class DeferedDeleter;
+
 	class RenderContext {
 	public:
 		RenderContext();
@@ -87,6 +89,8 @@ namespace RHI {
 
 		std::vector<std::unique_ptr<CommandBuffer>> m_commandBuffers;
 		
+    std::unique_ptr<DeferedDeleter> m_deferedDeleter{ nullptr };
+
 		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
 
 		std::unique_ptr<Upload> m_upload{ nullptr };

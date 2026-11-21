@@ -2,7 +2,6 @@
 
 #include<cstdint>
 #include<vector>
-#include<limits>
 #include<span>
 
 namespace RHI {
@@ -260,4 +259,8 @@ namespace RHI {
 		std::span<DynamicState> dynamicStates;
 		const char* debugName = "graphicsPipeline";
 	};
+  struct PassRes{
+    PipelineHandle pipelineHandle;
+    
+  };
 }

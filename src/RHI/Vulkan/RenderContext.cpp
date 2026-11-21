@@ -13,6 +13,7 @@
 #include "RenderContext.h"
 #include "ResourcesPool.h"
 #include "Upload.h"
+#include "DeferedDeleter.h"
 
 #include <iostream>
 
@@ -72,6 +73,8 @@ void RenderContext::initRenderContext(
     m_commandBuffers[i]->initCommandBuffer(m_device, m_graphicsQueueFamlily,
                                            buffers[i]);
   }
+  
+  m_deferedDeleter = std::make_unique<DeferedDeleter>();
 
   m_resourcesPool = std::make_unique<ResourcesPool>();
   m_resourcesPool->init(m_device, m_commandPool, m_graphicsQueue, m_allocator);
