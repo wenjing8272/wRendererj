@@ -29,6 +29,7 @@ namespace RHI{
     {
       i.deleter();
     }
+    m_ready.clear();
   }
   void DeferedDeleter::flushAll()
   {
@@ -36,5 +37,7 @@ namespace RHI{
     {
       i.deleter();
     }
+    m_deferedDeletions.clear();
+    m_ready.clear();
   }
 }

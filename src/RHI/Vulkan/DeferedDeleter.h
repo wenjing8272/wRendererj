@@ -1,3 +1,4 @@
+#pragma once
 #include<deque>
 #include<mutex>
 #include<functional>
@@ -13,7 +14,7 @@ namespace RHI{
     DeferedDeleter() = default;
     ~DeferedDeleter();
     DeferedDeleter(const DeferedDeleter& otherDeleter) = delete;
-    DeferedDeleter operator=(const DeferedDeleter& otherDeleter) = delete;
+    DeferedDeleter& operator=(const DeferedDeleter& otherDeleter) = delete;
     
     //Add the appropriate resource release timing and lambda deleters to the delayed deletion queue
     void push(std::uint64_t waitValue,std::function<void()> deleter);

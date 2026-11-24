@@ -1,12 +1,6 @@
-// 平台相关的 Vulkan 定义必须在任何 Vulkan 头文件之前启用：
-// VkWin32SurfaceCreateInfoKHR / vkCreateWin32SurfaceKHR 在
-// VK_USE_PLATFORM_WIN32_KHR 打开时才会被 vulkan.h 引入
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <Windows.h>
-
-// RenderContext.h 里包含 VkBootstrap.h和完整的 vulkan.h。
-// 上面的宏必须先于这个包含，vulkan.h 才会再引入 vulkan_win32.h。
-#include "CommandBuffer.h"
+#include "CommandList.h"
+#include "Device.h"
+#include "Swapchain.h"
 #include "Common.hpp"
 #include "FrameSync.h"
 #include "Pipeline.h"
@@ -18,314 +12,156 @@
 #include <iostream>
 
 namespace RHI {
-RenderContext::RenderContext() = default;
-// 销毁顺序必须是子对象早于它的创建者：
-//   image views -> swapchain -> device -> surface -> instance
-// 其中 m_swapchainImages由 swapchain 隐式创建并拥有，
-// 销毁 swapchain 时自动释放
-RenderContext::~RenderContext() {
-  vkDeviceWaitIdle(m_device);
-  m_pipeline.reset();
-  std::cout << "renderContext" << "\n";
-  m_upload.reset();
-  m_frameSync.reset();
-  for (auto &commandList : m_commandBuffers) {
-    commandList.reset();
-  }
-  m_resourcesPool.reset();
-  vmaDestroyAllocator(m_allocator);
-  vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-  vkDestroyCommandPool(m_device, m_transferPool, nullptr);
-  vkDestroyCommandPool(m_device, m_computePool, nullptr);
-  m_swapchain.destroy_image_views(m_swapchainImageViews);
-  vkb::destroy_swapchain(m_swapchain);
-  vkb::destroy_device(m_device);
-  vkb::destroy_surface(m_instance, m_surface);
-  vkb::destroy_instance(m_instance);
-}
 
-void RenderContext::initRenderContext(
-    const InitResource &initRes,
-    const std::vector<std::string> &instanceExtensions) {
-  initDevice(initRes, instanceExtensions);
+    RenderContext::RenderContext() = default;
+    // Destruction order must be child-before-creator:
+    // image views -> swapchain -> device -> surface -> instance
+    RenderContext::~RenderContext() {
+        // Once RenderContext is fully constructed, any exception from a member
+        // function will trigger the destructor. If the exception was thrown before
+        // `m_device`(Device) was created, the destructor can just return early.
+        if (!m_device) return;
+        // Call vkDeviceWaitIdle before destroying resources, ensuring the GPU
+        // is done with them and nothing is freed while still in use.
+        vkDeviceWaitIdle(m_device->get());
+        // Drain the deferred-deletion queue, releasing all pending resources.
+        if(m_deferedDeleter)
+        {
+            m_deferedDeleter->flushAll();
+        }
+        // Destroy all child objects before the Device is released.
+        // Calling .reset() destroys the managed object immediately
+        // (invokes its destructor) and nulls the pointer.
+        m_pipeline.reset();
+        std::cout << "renderContext" << "\n";
+        m_upload.reset();
+        m_frameSync.reset();
+        for (auto &commandList : m_commandLists) {
+          commandList.reset();
+        }
+        m_resourcesPool.reset();
+        m_deferedDeleter.reset();
+        m_swapchain.reset();
+        m_device.reset();
+    }
 
+    void RenderContext::initRenderContext(const InitResource &initRes,
+                                          const std::vector<std::string> &instanceExtensions) {
+
+        m_device = std::make_unique<Device>(initRes, instanceExtensions);
+        // Window info lives in Swapchain. Anything that needs the window size reads it
+        // through this object, so each frame sees a single, consistent snapshot.
+        m_swapchain = std::make_unique<Swapchain>(*m_device);
+
+  // FrameSync 只持有每 frame-in-flight 的同步对象（image-available 信号量和
+  // 图形时间线）。图像的 acquire/present 委托给 Swapchain，因为它们操作的是
+  // 交换链自己的状态。
+  // FrameSync owns only the per-frame-in-flight sync objects (image-available
+  // semaphores and the graphics timeline). Image acquire and present are
+  // delegated to Swapchain, because they operate on swapchain-owned state.
   m_frameSync = std::make_unique<FrameSync>();
-  m_frameSync->initFrameSync(
-      m_device, m_graphicsQueue,
-      static_cast<std::uint32_t>(m_swapchainImages.size()));
+  m_frameSync->initFrameSync(m_device->get(), m_device->graphics().handle);
 
+  // DeferedDeleter 必须先于 ResourcesPool 创建：资源池不直接销毁 vk 对象，
+  // 而是把真正的销毁推迟到它里面，避免 GPU 还在读时被释放。
+  // DeferedDeleter must exist before ResourcesPool: the pool defers the real
+  // vk objects into it instead of destroying them while the GPU may still read.
+  m_deferedDeleter = std::make_unique<DeferedDeleter>();
+
+  // 资源池负责把带 generation 校验的句柄解析成 VkBuffer/VmaAllocation，
+  // 并把真正的销毁推进延迟删除器。
+  // The pool resolves generation-checked handles to VkBuffer/VmaAllocation and
+  // pushes real destroys into the deferred deleter.
+  m_resourcesPool = std::make_unique<ResourcesPool>();
+  m_resourcesPool->init(m_device->get(), m_device->graphics().pool,
+                        m_device->graphics().handle, m_device->allocator(),
+                        *m_deferedDeleter);
+
+  // Upload 在传输队列上录制拷贝，该队列的 pool 创建时带了 TRANSIENT 标记，
+  // 因为它只承载生命周期很短的 one-shot 提交。
+  // Upload records its copies on the transfer queue, whose pool was created
+  // with the TRANSIENT flag since it only holds short-lived one-shot submits.
+  m_upload = std::make_unique<Upload>();
+  m_upload->init(m_device->get(), m_device->transfer().pool,
+                 m_device->transfer().handle);
+
+  // Pipeline 只需要设备；shader module 和 pipeline 对象随它一起销毁。
+  // Pipeline only needs the device; shader modules and pipeline objects are
+  // destroyed with it.
+  m_pipeline = std::make_unique<Pipeline>();
+  m_pipeline->init(m_device->get());
+
+  // CommandList 内部要解析 PipelineHandle/BufferHandle，所以必须在
+  // ResourcesPool 和 Pipeline 之后创建。
+  // CommandList resolves PipelineHandle/BufferHandle internally, so it must be
+  // created after ResourcesPool and Pipeline.
+  //
+  // 每个 frame-in-flight 槽位一个 primary 命令缓冲，从带 RESET 标记的
+  // 图形队列 pool 分配：每个槽位每帧重录同一个缓冲，录制开始时先显式 reset。
+  // One primary command buffer per frame-in-flight slot, allocated from the
+  // graphics pool (created with the RESET bit): each slot re-records the same
+  // buffer every frame, and recording starts with an explicit reset.
   std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> buffers{};
 
   VkCommandBufferAllocateInfo commandBufferInfo{};
   commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   commandBufferInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
-  commandBufferInfo.commandPool = m_commandPool;
+  commandBufferInfo.commandPool = m_device->graphics().pool;
   commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-  if (vkAllocateCommandBuffers(m_device, &commandBufferInfo, buffers.data()) !=
+  if (vkAllocateCommandBuffers(m_device->get(), &commandBufferInfo, buffers.data()) !=
       VK_SUCCESS) {
     throw std::runtime_error("vkAllocateCommandBuffers failed");
   }
 
-  m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+  m_commandLists.resize(MAX_FRAMES_IN_FLIGHT);
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-    m_commandBuffers[i] = std::make_unique<CommandBuffer>();
-    m_commandBuffers[i]->initCommandBuffer(m_device, m_graphicsQueueFamlily,
-                                           buffers[i]);
-  }
-  
-  m_deferedDeleter = std::make_unique<DeferedDeleter>();
-
-  m_resourcesPool = std::make_unique<ResourcesPool>();
-  m_resourcesPool->init(m_device, m_commandPool, m_graphicsQueue, m_allocator);
-
-  m_upload = std::make_unique<Upload>();
-  m_upload->init(m_device, m_transferPool, m_transferQueue);
-
-  m_pipeline = std::make_unique<Pipeline>();
-  m_pipeline->init(m_device);
-}
-
-void RenderContext::initDevice(
-    const InitResource &initRes,
-    const std::vector<std::string> &instanceExtensions) {
-  // ---------- 1. 创建 VkInstance ----------
-  // Instance 是整个 Vulkan 上下文的根对象，surface、physical device、device
-  // 都挂在它下面,require_api_version(1,3,0)
-  vkb::InstanceBuilder instanceBuilder;
-  instanceBuilder.set_app_name(initRes.appName)
-      .set_engine_name(initRes.appName)
-      .require_api_version(1, 3, 0)
-      .enable_extensions(instanceExtensions);
-#ifndef NDEBUG
-  instanceBuilder.enable_validation_layers().use_default_debug_messenger();
-#endif // !NDEBUG
-       // vkb 的 build()/select() 统一返回 Result<T>：失败时内部存的是 Error，
-       // 此时调用 .value() 会抛 std::bad_variant_access，所以必须先判 !result。
-  auto instanceResult = instanceBuilder.build();
-  if (!instanceResult) {
-    throw std::runtime_error("Failed to create Vulkan instance: " +
-                             instanceResult.error().message());
-  }
-  m_instance = instanceResult.value();
-
-  // ---------- 2. 用原生窗口句柄创建 VkSurfaceKHR ----------
-  // vk-bootstrap 不接收原生句柄，只接收已经创建好的 VkSurfaceKHR。
-  // NativeResources 用 void* 保存两个平台句柄：
-  //   display -> HINSTANCE（GetModuleHandle），Win32 surface 所属的模块实例
-  //   window  -> HWND（glfwGetWin32Window），实际窗口
-  // sType 才是结构体类型标识，flags 是保留字段（必须为 0），不要填反。
-  if (initRes.native.display == nullptr || initRes.native.window == nullptr) {
-    throw std::runtime_error("Invalid native resources provided");
-  }
-  VkWin32SurfaceCreateInfoKHR surfaceInfo{};
-  surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  surfaceInfo.hinstance = static_cast<HINSTANCE>(initRes.native.display);
-  surfaceInfo.hwnd = static_cast<HWND>(initRes.native.window);
-  VkResult surfaceResult =
-      vkCreateWin32SurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface);
-  // VkResult 是枚举，只有 0（VK_SUCCESS）代表成功，必须显式比较；
-  // 写成 if (!surfaceResult) 会把成功当成失败、把失败当成成功。
-  if (surfaceResult != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create Win32 surface, VkResult = " +
-                             std::to_string(surfaceResult));
-  }
-
-  //
-  VkPhysicalDeviceVulkan12Features vulkan12{};
-  vulkan12.timelineSemaphore = true;
-
-  VkPhysicalDeviceVulkan13Features vulkan13{};
-  vulkan13.dynamicRendering = true;
-  vulkan13.synchronization2 = true;
-  // ---------- 3. 选择物理设备（GPU） ----------
-  // 传入 surface 后，selector 会检查哪些队列族支持向该 surface 呈现，
-  // 并以此过滤设备；set_minimum_version(1,3) 要求设备支持 Vulkan 1.3。
-  // 这里没有声明额外的扩展和 feature，因此 device 只拥有 1.3 核心能力中
-  // 显式开启的部分（默认全为 false，包括 dynamicRendering/synchronization2）。
-  auto physicalResult = vkb::PhysicalDeviceSelector(m_instance, m_surface)
-                            .set_minimum_version(1, 3)
-                            .set_required_features_12(vulkan12)
-                            .set_required_features_13(vulkan13)
-                            .select();
-  if (!physicalResult) {
-    throw std::runtime_error("Failed to select physical device: " +
-                             physicalResult.error().message());
-  }
-  m_physicalDevice = physicalResult.value();
-  std::cout << "GPU: " << m_physicalDevice.properties.deviceName << std::endl;
-
-  // ---------- 4. 创建逻辑设备 VkDevice ----------
-  // DeviceBuilder 在 vkCreateDevice 时会：
-  //   - 为物理设备的每个队列族各创建 1 个队列（优先级 1.0）；
-  //   - 因为 selector 带了 surface，自动启用 VK_KHR_swapchain；
-  //   - 把 selector 中声明的扩展和 feature 结构一并带上。
-  // 需要队列句柄时通过 m_device.get_queue(vkb::QueueType::graphics) 获取。
-  auto deviceResult = vkb::DeviceBuilder(m_physicalDevice).build();
-  if (!deviceResult) {
-    throw std::runtime_error("Failed to create logical device: " +
-                             deviceResult.error().message());
-  }
-  m_device = deviceResult.value();
-
-  // 初始化配置debug
-  // name函数，在DebugName里面创建配置PFN_vkSetDebugUtilsObjectNameEXT函数指针
-  DebugName::init(m_device);
-
-  // 创建vma allocator
-  VmaAllocatorCreateInfo allocatorInfo{};
-  allocatorInfo.instance = m_instance;
-  allocatorInfo.physicalDevice = m_physicalDevice;
-  allocatorInfo.device = m_device;
-  allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
-  if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS) {
-    throw std::runtime_error("vmaCreateAllocator failed");
-  }
-
-  // ---------- 5. 创建交换链 ----------
-  // SwapchainBuilder 从 Device 里取出 surface 和队列信息，默认选择 surface
-  // 支持的格式、颜色空间和 present mode。窗口尺寸变化时需要重建：
-  // 先销毁旧 image views，再用 set_old_swapchain(...) 创建新链。
-  auto swapchainResult = vkb::SwapchainBuilder(m_device).build();
-  if (!swapchainResult) {
-    throw std::runtime_error("Failed to create swapchain: " +
-                             swapchainResult.error().message());
-  }
-  m_swapchain = swapchainResult.value();
-
-  // ---------- 6. 获取交换链图像 ----------
-  // 这些 VkImage 由 vkCreateSwapchainKHR 隐式创建，归交换链所有，
-  // 销毁 swapchain 时自动释放，不能对它们调用 vkDestroyImage。
-  auto swapchainImagesResult = m_swapchain.get_images();
-  if (!swapchainImagesResult) {
-    throw std::runtime_error("Failed to get swapchain images: " +
-                             swapchainImagesResult.error().message());
-  }
-  m_swapchainImages = swapchainImagesResult.value();
-
-  m_swapchainArea = {{0, 0},
-                     {initRes.frameBufferWidth, initRes.frameBufferHeight}};
-  // ---------- 7. 创建图像视图 ----------
-  // 上面的 image 不同，VkImageView 是我们通过 vkCreateImageView 创建的，
-  // 所有权在我们手里：必须在销毁 swapchain 之前用
-  // swapchain.destroy_image_views(...) 释放（见析构函数）。
-  auto swapchainImageViewsResult = m_swapchain.get_image_views();
-  if (!swapchainImageViewsResult) {
-    throw std::runtime_error("Failed to get swapchain image views: " +
-                             swapchainImageViewsResult.error().message());
-  }
-  m_swapchainImageViews = swapchainImageViewsResult.value();
-  // graphics queue
-  auto graphicsQueueResult = m_device.get_queue(vkb::QueueType::graphics);
-  if (!graphicsQueueResult) {
-    throw std::runtime_error("Failed to get graphics queue: " +
-                             graphicsQueueResult.error().message());
-  }
-  m_graphicsQueue = graphicsQueueResult.value();
-  m_graphicsQueueFamlily =
-      m_device.get_queue_index(vkb::QueueType::graphics).value();
-
-  VkCommandPoolCreateInfo commandPoolInfo{};
-  commandPoolInfo.queueFamilyIndex = m_graphicsQueueFamlily;
-  commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-  if (vkCreateCommandPool(m_device, &commandPoolInfo, nullptr,
-                          &m_commandPool) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create graphic command pool");
-  }
-
-  // transfer queue
-  auto transferQueueResult = m_device.get_queue(vkb::QueueType::transfer);
-  if (!transferQueueResult) {
-    throw std::runtime_error("Failed to get transfer queue: " +
-                             transferQueueResult.error().message());
-  }
-  m_transferQueue = transferQueueResult.value();
-  m_transferQueueFamlily =
-      m_device.get_queue_index(vkb::QueueType::transfer).value();
-
-  VkCommandPoolCreateInfo transferInfo{};
-  transferInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
-                       VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  transferInfo.queueFamilyIndex = m_transferQueueFamlily;
-  transferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-  if (vkCreateCommandPool(m_device, &transferInfo, nullptr, &m_transferPool) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create transfer command pool");
-  }
-
-  // compute queue
-  auto computeQueueResult = m_device.get_queue(vkb::QueueType::compute);
-  if (!computeQueueResult) {
-    throw std::runtime_error("Failed to get compute queue: " +
-                             computeQueueResult.error().message());
-  }
-  m_computeQueue = computeQueueResult.value();
-  m_computeQueueFamlily =
-      m_device.get_queue_index(vkb::QueueType::compute).value();
-
-  VkCommandPoolCreateInfo computeInfo{};
-  computeInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  computeInfo.queueFamilyIndex = m_computeQueueFamlily;
-  computeInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-  if (vkCreateCommandPool(m_device, &computeInfo, nullptr, &m_computePool) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create compute command pool");
+    m_commandLists[i] = std::make_unique<CommandList>();
+    m_commandLists[i]->init(m_device->get(), m_device->graphics().family,
+                            buffers[i], *m_resourcesPool, *m_pipeline);
   }
 }
+
 void RenderContext::recreateSwapchain(Extent2D extent) {
-  vkQueueWaitIdle(m_graphicsQueue);
-  // 记录旧的交换链，销毁旧的 image views
-  VkSwapchainKHR oldSwapchain = m_swapchain;
-  m_swapchain.destroy_image_views(m_swapchainImageViews);
-  m_swapchainImages.clear();
-  // 创建新的交换链
-  auto swapchainResult = vkb::SwapchainBuilder(m_device)
-                             .set_desired_extent(extent.width, extent.height)
-                             .set_old_swapchain(oldSwapchain)
-                             .build();
-  if (!swapchainResult) {
-    throw std::runtime_error("Failed to recreate swapchain: " +
-                             swapchainResult.error().message());
-  }
-  m_swapchain = swapchainResult.value();
-  // 清理旧交换链
-  vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
-  // 获取新的交换链图像
-  auto swapchainImagesResult = m_swapchain.get_images();
-  if (!swapchainImagesResult) {
-    throw std::runtime_error("Failed to get swapchain images: " +
-                             swapchainImagesResult.error().message());
-  }
-  m_swapchainImages = swapchainImagesResult.value();
-  m_swapchainArea.extent = {extent.width, extent.height};
-  // 创建新的图像视图
-  auto swapchainImageViewsResult = m_swapchain.get_image_views();
-  if (!swapchainImageViewsResult) {
-    throw std::runtime_error("Failed to get swapchain image views: " +
-                             swapchainImageViewsResult.error().message());
-  }
-  m_swapchainImageViews = swapchainImageViewsResult.value();
-
-  m_frameSync->recreateRenderingFinishedSemaphore(
-      static_cast<std::uint32_t>(m_swapchainImages.size()));
+  // 旧交换链的图像和信号量可能还被在途帧引用，换掉之前先把图形队列排空。
+  // The old swapchain's images and semaphores may still be referenced by
+  // in-flight frames, so drain the graphics queue before swapping it out.
+  vkQueueWaitIdle(m_device->graphics().handle);
+  // 先构造新交换链（带上旧句柄让驱动尽量复用资源），成功后再让旧对象析构。
+  // 构造中途抛异常时旧交换链仍然完好，调用方下一帧重试即可。
+  // Build the new swapchain first (passing the old handle so the driver can
+  // reuse resources) and only then let the old object destruct. If the
+  // constructor throws, the old swapchain is still intact and the caller can
+  // simply retry on the next frame.
+  auto next = std::make_unique<Swapchain>(*m_device, extent, m_swapchain->get());
+  m_swapchain = std::move(next);
 }
 BufferHandle RenderContext::createBuffer(std::uint64_t size,
                                          BufferUsage bufferUsage,
                                          MemoryProperty memoryProperty) {
+  // 句柄是 index+generation。槽位复用时 generation 自增，保证已销毁的句柄
+  // 校验失败，而不是悄悄解析成占用同一槽位的新 buffer。
+  // Handles are index+generation pairs. The generation bump on slot reuse is
+  // what makes a destroyed handle fail validation instead of silently
+  // resolving to whatever buffer now occupies the same slot.
   return m_resourcesPool->createBuffer(size, userToVK(bufferUsage),
                                        userToVK(memoryProperty));
 }
 void RenderContext::copyBuffer(BufferHandle copyBuffer, const void *data,
                                std::uint64_t dataSize) {
+  // 只有 host-visible 内存的 buffer 在创建时被映射；资源池会拒绝其他情况，
+  // 而不是对着空指针做 memcpy。
+  // Only host-visible buffers are mapped at creation; the pool rejects
+  // everything else rather than memcpy-ing through a null pointer.
   m_resourcesPool->copyBuffer(copyBuffer, data, dataSize);
 }
 void RenderContext::uploadBuffer(BufferHandle srcBufferHandle,
                                  BufferHandle dstBufferHandle,
                                  std::uint64_t bufferSize) {
+  // 两个句柄先校验再解析：过期句柄必须在这里就报错，
+  // 而不是在拷贝时悄悄变成空 VkBuffer。
+  // Validate both handles before resolving them: a stale handle must fail
+  // loudly here instead of turning into a null VkBuffer inside the copy.
   if (!m_resourcesPool->isBufferVaild(srcBufferHandle) ||
       !m_resourcesPool->isBufferVaild(dstBufferHandle)) {
     throw std::runtime_error("src or dst buffer no vaild");
@@ -340,71 +176,67 @@ RenderContext::createShader(const std::vector<std::uint32_t> &shaderCode) {
 }
 PipelineHandle
 RenderContext::createGraphicsPipeline(const GraphicsPipeline &pipelineRes) {
+  // 当前交换链格式会被烘进管线的颜色附件状态。若重建后的交换链协商出
+  // 不同的格式，这里创建的管线就不再匹配渲染目标，必须重新创建。
+  // The current swapchain format is baked into the pipeline's color attachment
+  // state. If a recreated swapchain negotiates a different format, pipelines
+  // built here no longer match the render target and must be rebuilt.
   return m_pipeline->createGraphicsPipeline(pipelineRes,
-                                            m_swapchain.image_format);
+                                            m_swapchain->format());
 }
-void RenderContext::begin(bool &swapchainDirty) {
-  m_currentFrame = m_frameSync->frameBegin(m_swapchain);
-  if (!m_currentFrame.has_value()) {
-    swapchainDirty = true;
-    return;
+// Return null means the swapchain is out of date, need to recreate swapchain
+std::optional<Frame> RenderContext::begin() {
+  // 非阻塞地查询时间线计数器：把 retire 值已被点亮的删除项执行掉，
+  // 这里不会等 GPU。
+  // Non-blocking poll of the timeline counter: execute the deleters whose
+  // retire value has already been signaled. Nothing here waits on the GPU.
+  m_deferedDeleter->deferedDeletion(m_device->get(),
+                                    m_frameSync->timelineSemaphore());
+  // 拿下一张图像并占用本帧的槽位和 timeline 值。返回空表示 acquire 失败
+  // （通常是交换链过期），必须在开始录制之前重建交换链。
+  // Acquire the next image and claim this frame's slot/value. A nullopt means
+  // acquire failed (typically out of date), so the swapchain must be recreated
+  // before any recording starts.
+  auto frame = m_frameSync->frameBegin(*m_swapchain);
+  if (!frame) {
+    return std::nullopt;
   }
+  // 把渲染目标快照进 Frame，录制代码只依赖这个值，不再回头碰交换链。
+  // Snapshot the render target into the frame so recording code only needs the
+  // Frame value and never reaches back into the swapchain.
+  frame->image = m_swapchain->image(frame->imageIndex);
+  frame->imageView = m_swapchain->view(frame->imageIndex);
+  frame->area = m_swapchain->area();
+  frame->commandList = m_commandLists[frame->frameIndex].get();
+  // 立即 reset 并开始录制。beginRendering 里还会做
+  // UNDEFINED -> COLOR_ATTACHMENT 的布局转换，然后才 vkCmdBeginRendering。
+  // Reset and start recording now. beginRendering still performs the
+  // UNDEFINED -> COLOR_ATTACHMENT layout transition before vkCmdBeginRendering.
+  frame->commandList->begin();
+  return frame;
 }
-void RenderContext::beginRendering(RenderTarget renderTarget) {
-  m_commandBuffers[m_currentFrame->frameIndex]->beginCommandBuffer();
-  if (renderTarget == RenderTarget::Swapchain) {
-    m_commandBuffers[m_currentFrame->frameIndex]->beginRendering(
-        m_swapchainImages[m_currentFrame->imageIndex],
-        m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
-  } else if (renderTarget == RenderTarget::GeneralImage) {
-
-  } else {
-    throw std::runtime_error("must configure render target");
-  }
-}
-void RenderContext::bindPipeline(PipelineHandle pipelineHandle) {
-  if (!m_pipeline->pipelineIsVaild(pipelineHandle)) {
-    throw std::runtime_error("pipeline no vaild");
-  }
-  m_commandBuffers[m_currentFrame->frameIndex]->bindGraphicsPipeline(
-      m_pipeline->getPipeline(pipelineHandle));
-}
-void RenderContext::setViewport(Viewport viewport) {
-  m_commandBuffers[m_currentFrame->frameIndex]->setViewport(
-      {viewport.x, viewport.y, viewport.width, viewport.height,
-       viewport.minDepth, viewport.maxDepth});
-}
-void RenderContext::setScissor(Area2D area) {
-  m_commandBuffers[m_currentFrame->frameIndex]->setScissor(
-      {.offset = {area.offset.x, area.offset.y},
-       .extent = {area.extent.width, area.extent.height}});
-}
-void RenderContext::bindingVertexBuffer(BufferHandle bufferHandle) {
-  if (!m_resourcesPool->isBufferVaild(bufferHandle)) {
-    throw std::runtime_error("vertex buffer no vaild");
-  }
-  m_commandBuffers[m_currentFrame->frameIndex]->bindVertexBuffer(
-      m_resourcesPool->getBuffer(bufferHandle));
-}
-void RenderContext::draw() {
-  m_commandBuffers[m_currentFrame->frameIndex]->draw();
-}
-void RenderContext::endRendering() {
-  m_commandBuffers[m_currentFrame->frameIndex]->endRendering(
-      m_swapchainImages[m_currentFrame->imageIndex],
-      m_swapchainImageViews[m_currentFrame->imageIndex], m_swapchainArea);
-  auto commandBuffer =
-      m_commandBuffers[m_currentFrame->frameIndex]->endCommandBuffer();
-  m_currentFrame->commandBuffer = commandBuffer;
-}
-void RenderContext::end(bool &swapchainDirty) {
-  if (!m_frameSync->frameEnd(m_currentFrame.value(), m_swapchain)) {
-    swapchainDirty = true;
-    return;
-  }
+// Return false means present failure, likely the swapchain is out of date;
+// need to recreate swapchain.
+bool RenderContext::end(Frame &frame) {
+  // 提交前必须先结束录制；FrameSync 提交的是 Frame 里存的句柄，
+  // 所以 vkEndCommandBuffer 之后要把句柄写回 Frame。
+  // Recording must be closed before submit; FrameSync submits whatever handle
+  // is stored in the frame, so write it back after vkEndCommandBuffer.
+  frame.commandBuffer = frame.commandList->end();
+  // 提交本帧并 present。返回 false 表示 present 失败（通常是交换链过期），
+  // 调用方重建交换链后继续。
+  // Submit the frame and present the image. A false result means present
+  // failed (usually out of date); the caller recreates and continues.
+  return m_frameSync->frameEnd(frame, *m_swapchain);
 }
 
 void RenderContext::destoryBuffer(BufferHandle bufferHandle) {
-  m_resourcesPool->destoryBuffer(bufferHandle);
+  // 句柄立即失效，但 VkBuffer/VmaAllocation 会活到图形时间线越过最后提交的
+  // 值为止：在途帧可能还在读它们。
+  // The handle dies immediately, but the VkBuffer/VmaAllocation stay alive
+  // until the graphics timeline passes the last submitted value: in-flight
+  // frames may still be reading from them.
+  m_resourcesPool->destoryBuffer(bufferHandle,
+                                 m_frameSync->currentTimelineValue());
 }
 } // namespace RHI

@@ -7,6 +7,8 @@
 #include<optional>
 
 namespace RHI {
+	class Swapchain;
+
 	class FrameSync {
 	public:
 		FrameSync() = default;
@@ -15,20 +17,22 @@ namespace RHI {
 		FrameSync& operator=(const FrameSync& otherFrameSync) = delete;
 		FrameSync(FrameSync&& otherFrameSync) = delete;
 		FrameSync& operator=(FrameSync&& otherFrameSync) = delete;
-		void initFrameSync(VkDevice device,VkQueue graphicsQueue,std::uint32_t swapchainTotal);
-		std::optional<FrameResources> frameBegin(VkSwapchainKHR swapchain);
-		bool frameEnd(const FrameResources& frame, VkSwapchainKHR swapchain);
-		void recreateRenderingFinishedSemaphore(std::uint32_t swapchainTotal);
+		void initFrameSync(VkDevice device,VkQueue graphicsQueue);
+		std::optional<Frame> frameBegin(Swapchain& swapchain);
+		bool frameEnd(const Frame& frame, Swapchain& swapchain);
+
+		// 已提交到图形队列的最大 timeline 值：此刻之前提交的 work 都 ≤ 这个值
+		std::uint64_t currentTimelineValue() const { return m_timeValue; }
+		VkSemaphore timelineSemaphore() const { return m_graphicsSemaphore; }
 	private:
 		const bool waitTimeline(std::uint64_t value)const;
+		void destory();
 		struct Slot
 		{
 			std::uint32_t retire{ 0 };
 			VkSemaphore acquied{ VK_NULL_HANDLE };
 		};
-		std::uint32_t m_swapchainTotal{ 0 };
 		std::array<Slot,MAX_FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
-		std::vector<VkSemaphore> m_renderFinishedSemaphores;
 		VkSemaphore m_graphicsSemaphore = VK_NULL_HANDLE;
 		VkDevice m_device = VK_NULL_HANDLE;
 		VkQueue m_graphicsQueue = VK_NULL_HANDLE;

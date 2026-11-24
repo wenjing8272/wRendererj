@@ -6,6 +6,8 @@
 #include<vector>
 
 namespace RHI {
+	class DeferedDeleter;
+
 	struct BufferRecord
 	{
 		VkBuffer buffer{ VK_NULL_HANDLE };
@@ -22,7 +24,8 @@ namespace RHI {
 	public:
 		ResourcesPool() = default;
 		~ResourcesPool();
-		void init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator);
+		void init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator,
+			DeferedDeleter& deferedDeleter);
 
 		BufferHandle createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 		ShaderHandle createShaderModule(const std::vector<char>& code);
@@ -31,7 +34,9 @@ namespace RHI {
 		bool isBufferVaild(BufferHandle bufferHandle);
 		VkBuffer getBuffer(BufferHandle bufferHandle);
 
-		void destoryBuffer(BufferHandle bufferHandle);
+		// retireValue：GPU 时间线上该资源最后一次被使用的那一帧的 signal 值。
+		// 立即让句柄失效，实际销毁延迟到时间线越过该值。
+		void destoryBuffer(BufferHandle bufferHandle, std::uint64_t retireValue);
 
 		void copyBuffer(BufferHandle copyBuffer,const void* data,VkDeviceSize dataSize);
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -41,6 +46,7 @@ namespace RHI {
 		VkCommandPool m_commandPool{ VK_NULL_HANDLE };
 		VkQueue m_graphicsQueue{ VK_NULL_HANDLE };
 		VmaAllocator m_allocator{ VK_NULL_HANDLE };
+		DeferedDeleter* m_deferedDeleter{ nullptr };
 
 		std::vector<BufferRecord> m_buffers;
 	};

@@ -1,5 +1,6 @@
 #include"ResourcesPool.h"
 #include"Common.hpp"
+#include"DeferedDeleter.h"
 
 #include<cassert>
 #include<stdexcept>
@@ -13,12 +14,14 @@ namespace RHI {
 				vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
 		}
 	}
-	void ResourcesPool::init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator)
+	void ResourcesPool::init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator,
+		DeferedDeleter& deferedDeleter)
 	{
 		m_device = device;
 		m_commandPool = commandPool;
 		m_graphicsQueue = graphicsQueue;
 		m_allocator = allocator;
+		m_deferedDeleter = &deferedDeleter;
 	}
 
 	BufferHandle ResourcesPool::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -76,14 +79,21 @@ namespace RHI {
 	{
 		return m_buffers[bufferHandle.index].buffer;
 	}
-	void ResourcesPool::destoryBuffer(BufferHandle bufferHandle)
+	void ResourcesPool::destoryBuffer(BufferHandle bufferHandle, std::uint64_t retireValue)
 	{
 		if (!isBufferVaild(bufferHandle))return;
 		auto& buffer = m_buffers[bufferHandle.index];
-		vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
+		// 句柄立即失效，槽位可被 acquireIndex 复用（generation 自增）；
+		// 真实对象按值捕获捕获进删除队列，不会误删复用后的新 buffer
+		const VkBuffer vkBuffer = buffer.buffer;
+		const VmaAllocation allocation = buffer.allocation;
 		buffer.alive = false;
 		buffer.buffer = VK_NULL_HANDLE;
 		buffer.allocation = VK_NULL_HANDLE;
 		buffer.mapped = nullptr;
+
+		m_deferedDeleter->push(retireValue, [allocator = m_allocator, vkBuffer, allocation]() {
+			vmaDestroyBuffer(allocator, vkBuffer, allocation);
+		});
 	}
 }

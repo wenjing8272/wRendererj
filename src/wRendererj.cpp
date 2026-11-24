@@ -3,6 +3,7 @@
 #include"Window/WindowManger.h"
 #include"RHI/Types.h"
 #include"RHI/Vulkan/RenderContext.h"
+#include"RHI/Vulkan/CommandList.h"
 #include"Asset/Test.h"
 
 #include <iostream>
@@ -180,17 +181,20 @@ int main()
 				renderContext.recreateSwapchain({ framebufferSize.width, framebufferSize.height });
 				swapchainDirty = false;
 			}
-			renderContext.begin(swapchainDirty);
-			if (swapchainDirty)continue;
-			renderContext.beginRendering(RHI::RenderTarget::Swapchain);
-			renderContext.bindPipeline(testPipelinHandle);
-			renderContext.setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(framebufferSize.width),.height = static_cast<float>(framebufferSize.height),.minDepth = 0.0f,.maxDepth = 1.0f });
-			renderContext.setScissor({ .offset = {0,0},.extent = framebufferSize });
-			renderContext.bindingVertexBuffer(bufferHandle);
-			renderContext.draw();
-			renderContext.endRendering();
-			renderContext.end(swapchainDirty);
-			if (swapchainDirty)continue;
+			auto frame = renderContext.begin();
+			if (!frame)
+			{
+				swapchainDirty = true;
+				continue;
+			}
+			frame->commandList->beginRendering(frame->image, frame->imageView, frame->area);
+			frame->commandList->bindPipeline(testPipelinHandle);
+			frame->commandList->setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(frame->area.extent.width),.height = static_cast<float>(frame->area.extent.height),.minDepth = 0.0f,.maxDepth = 1.0f });
+			frame->commandList->setScissor({ .offset = {0,0},.extent = frame->area.extent });
+			frame->commandList->bindVertexBuffer(bufferHandle);
+			frame->commandList->draw();
+			frame->commandList->endRendering(frame->image);
+			if (!renderContext.end(*frame))swapchainDirty = true;
 		}
 	}
 	catch (const std::exception& e)

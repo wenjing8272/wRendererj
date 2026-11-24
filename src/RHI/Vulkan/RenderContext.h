@@ -12,9 +12,13 @@
 #include<optional>
 
 namespace RHI {
+	class Device;
+
+	class Swapchain;
+
 	class FrameSync;
 
-	class CommandBuffer;
+	class CommandList;
 
 	class ResourcesPool;
 
@@ -22,7 +26,7 @@ namespace RHI {
 
 	class Pipeline;
 
-  class DeferedDeleter;
+	class DeferedDeleter;
 
 	class RenderContext {
 	public:
@@ -32,7 +36,9 @@ namespace RHI {
 		RenderContext& operator=(const RenderContext& otherRenderContext) = delete;
 		RenderContext(RenderContext&& otherRenderContext) = delete;
 		RenderContext& operator=(RenderContext&& otherRenderContext) = delete;
+
 		void initRenderContext(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
+		
 		void recreateSwapchain(Extent2D extent);
 
 		BufferHandle createBuffer(std::uint64_t size,BufferUsage bufferUsage,MemoryProperty memoryProperty);
@@ -46,50 +52,21 @@ namespace RHI {
 
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
 
-		void begin(bool& swapchainDirty);
-		void beginRendering(RenderTarget renderTarget);
-		void bindPipeline(PipelineHandle pipelineHandle);
-		void setViewport(Viewport viewport);
-		void setScissor(Area2D area);
-		void bindingVertexBuffer(BufferHandle bufferHandle);
-		void draw();
-		void endRendering();
-		void end(bool& swapchainDirty);
+		// Return null means the swapchain is out of date,need to recreate swapchain
+		std::optional<Frame> begin();
+		// Return false means present failure,likely the swapchain is out of date;need to recreate swapchain
+		bool end(Frame& frame);
 	private:
-		void initDevice(const InitResource& initRes,const std::vector<std::string>& instanceExtensions);
+		std::unique_ptr<Device> m_device{ nullptr };
 
-		vkb::Instance m_instance;
-		// 必须初始化为空句柄：initRenderContext 中途失败时析构函数仍会执行销毁逻辑
-		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-		vkb::PhysicalDevice m_physicalDevice;
-		vkb::Device m_device;
-
-		vkb::Swapchain m_swapchain;
-		// 这些 VkImage 归交换链所有，不要手动销毁
-		std::vector<VkImage> m_swapchainImages;
-		// 这些 VkImageView 由我们创建，必须在销毁交换链之前释放
-		std::vector<VkImageView> m_swapchainImageViews;
-		Area2D m_swapchainArea;
-
-		VmaAllocator m_allocator{ VK_NULL_HANDLE };
-
-		std::uint32_t m_graphicsQueueFamlily{ 0 };
-		std::uint32_t m_computeQueueFamlily{ 0 };
-		std::uint32_t m_transferQueueFamlily{ 0 };
-		VkQueue m_graphicsQueue{ VK_NULL_HANDLE };
-		VkQueue m_transferQueue{ VK_NULL_HANDLE };
-		VkQueue m_computeQueue{ VK_NULL_HANDLE };
-
-		VkCommandPool m_commandPool{ VK_NULL_HANDLE };
-		VkCommandPool m_transferPool{ VK_NULL_HANDLE };
-		VkCommandPool m_computePool{ VK_NULL_HANDLE };
+		std::unique_ptr<Swapchain> m_swapchain{ nullptr };
 
 		std::unique_ptr<FrameSync> m_frameSync{ nullptr };
-		std::optional<FrameResources> m_currentFrame;
 
-		std::vector<std::unique_ptr<CommandBuffer>> m_commandBuffers;
+		// One recording entry per frame-in-flight slot; lives as long as the device.
+		std::vector<std::unique_ptr<CommandList>> m_commandLists;
 		
-    std::unique_ptr<DeferedDeleter> m_deferedDeleter{ nullptr };
+    	std::unique_ptr<DeferedDeleter> m_deferedDeleter{ nullptr };
 
 		std::unique_ptr<ResourcesPool> m_resourcesPool{ nullptr };
 

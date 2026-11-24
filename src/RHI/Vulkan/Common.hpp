@@ -33,6 +33,9 @@ namespace RHI {
 		template<>struct VkObjectStairts<VkPipelineLayout> {
 			static constexpr VkObjectType Value = VK_OBJECT_TYPE_PIPELINE_LAYOUT;
 		};
+		template<>struct VkObjectStairts<VkSemaphore>{
+			static constexpr VkObjectType Value = VK_OBJECT_TYPE_SEMAPHORE;
+		};
 
 		//Init tool class 
 		static void init(VkDevice device)

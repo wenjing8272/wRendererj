@@ -1,35 +1,38 @@
-#include"CommandBuffer.h"
+#include"CommandList.h"
+#include"ResourcesPool.h"
+#include"Pipeline.h"
+
+#include<stdexcept>
 
 namespace RHI {
-	CommandBuffer::CommandBuffer() = default;
-	CommandBuffer::~CommandBuffer()
-	{
-	}
-	void CommandBuffer::initCommandBuffer(VkDevice device, std::uint32_t graphicsQueueFamlily,VkCommandBuffer commandBuffer)
+	void CommandList::init(VkDevice device, std::uint32_t graphicsQueueFamily, VkCommandBuffer commandBuffer,
+		ResourcesPool& resources, Pipeline& pipelines)
 	{
 		m_device = device;
-		m_graphicsQueueFamlily = graphicsQueueFamlily;
+		m_graphicsQueueFamily = graphicsQueueFamily;
 		m_commandBuffer = commandBuffer;
+		m_resources = &resources;
+		m_pipelines = &pipelines;
 	}
-	void CommandBuffer::beginCommandBuffer()
+	void CommandList::begin()
 	{
 		vkResetCommandBuffer(m_commandBuffer, 0);
 		VkCommandBufferBeginInfo commandBufferBeginInfo{};
 		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		vkBeginCommandBuffer(m_commandBuffer, &commandBufferBeginInfo);
 	}
-	void CommandBuffer::beginRendering(VkImage swapchainImage, VkImageView swapchainImageView, Area2D renderArea)
+	void CommandList::beginRendering(VkImage image, VkImageView imageView, Area2D renderArea)
 	{
-		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-										 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-										 VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
+		transitionImage(image, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+						 VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
 
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		colorAttachment.clearValue = clearColor;
-		colorAttachment.imageView = swapchainImageView;
+		colorAttachment.imageView = imageView;
 		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -44,47 +47,58 @@ namespace RHI {
 
 		vkCmdBeginRendering(m_commandBuffer, &renderingInfo);
 	}
-	void CommandBuffer::bindGraphicsPipeline(VkPipeline pipeline)
+	void CommandList::bindPipeline(PipelineHandle pipelineHandle)
 	{
-		vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		if (!m_pipelines->pipelineIsVaild(pipelineHandle))
+		{
+			throw std::runtime_error("pipeline no vaild");
+		}
+		vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+			m_pipelines->getPipeline(pipelineHandle));
 	}
-	void CommandBuffer::setViewport(VkViewport viewport)
+	void CommandList::setViewport(Viewport viewport)
 	{
-		vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+		VkViewport vkViewport{ viewport.x, viewport.y, viewport.width, viewport.height,
+			viewport.minDepth, viewport.maxDepth };
+		vkCmdSetViewport(m_commandBuffer, 0, 1, &vkViewport);
 	}
-	void CommandBuffer::setScissor(VkRect2D rect)
+	void CommandList::setScissor(Area2D area)
 	{
+		VkRect2D rect{ { area.offset.x, area.offset.y }, { area.extent.width, area.extent.height } };
 		vkCmdSetScissor(m_commandBuffer, 0, 1, &rect);
 	}
-	void CommandBuffer::bindVertexBuffer(VkBuffer vertexBuffer)
+	void CommandList::bindVertexBuffer(BufferHandle bufferHandle)
 	{
-		VkDeviceSize size = 0;
-		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &vertexBuffer, &size);
+		if (!m_resources->isBufferVaild(bufferHandle))
+		{
+			throw std::runtime_error("vertex buffer no vaild");
+		}
+		VkBuffer buffer = m_resources->getBuffer(bufferHandle);
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &buffer, &offset);
 	}
-	void CommandBuffer::draw()
+	void CommandList::draw()
 	{
 		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
 	}
-	void CommandBuffer::endRendering( VkImage swapchainImage,VkImageView swapchainImageView, Area2D renderArea)
+	void CommandList::endRendering(VkImage image)
 	{
-		
 		vkCmdEndRendering(m_commandBuffer);
 
-		transitionBufferRecord(swapchainImage, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-												 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
-												 VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
-
+		transitionImage(image, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_NONE,
+						 VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE });
 	}
-	VkCommandBuffer CommandBuffer::endCommandBuffer()
+	VkCommandBuffer CommandList::end()
 	{
 		vkEndCommandBuffer(m_commandBuffer);
 		return m_commandBuffer;
 	}
-	void CommandBuffer::transitionBufferRecord(VkImage buffer,const transitionInfomation& transInfo)
+	void CommandList::transitionImage(VkImage image, const transitionInfomation& transInfo)
 	{
 		VkImageMemoryBarrier2 barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-		barrier.image = buffer;
+		barrier.image = image;
 		barrier.oldLayout = transInfo.oldLayout;
 		barrier.newLayout = transInfo.newLayout;
 		barrier.srcAccessMask = transInfo.srcAccessMask;

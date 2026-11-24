@@ -1,4 +1,5 @@
 #include"Upload.h"
+#include"../Log.h"
 
 namespace RHI {
 	Upload::~Upload()
@@ -32,6 +33,10 @@ namespace RHI {
 	}
 	void Upload::uploadBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,VkDeviceSize bufferSize)
 	{
+    if(vkResetCommandBuffer(m_transferCommandBuffer,0) != VK_SUCCESS)
+    {
+      LOG_WARN("failed to reset command buffer");
+    }
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;

@@ -197,7 +197,7 @@ namespace RHI {
 	}
 	bool Pipeline::pipelineIsVaild(PipelineHandle pipelineHandle)
 	{
-		if (pipelineHandle.index >= m_pipelines.size() || pipelineHandle.index < 0)return false;
+		if (pipelineHandle.index >= m_pipelines.size())return false;
 		return m_pipelines[pipelineHandle.index].alive && m_pipelines[pipelineHandle.index].generation == pipelineHandle.generation;
 	}
 }
