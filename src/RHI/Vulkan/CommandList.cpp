@@ -3,16 +3,17 @@
 #include"Pipeline.h"
 
 #include<stdexcept>
+#include<iostream>
 
 namespace RHI {
-	void CommandList::init(VkDevice device, std::uint32_t graphicsQueueFamily, VkCommandBuffer commandBuffer,
-		ResourcesPool& resources, Pipeline& pipelines)
+	CommandList::CommandList(VkDevice device, std::uint32_t graphicsQueueFamily, VkCommandBuffer commandBuffer,
+							 ResourcesPool& resources, Pipeline& pipelines):
+	m_device(device),
+	m_graphicsQueueFamily(graphicsQueueFamily),
+	m_commandBuffer(commandBuffer),
+	m_resources(&resources),
+	m_pipelines(&pipelines)
 	{
-		m_device = device;
-		m_graphicsQueueFamily = graphicsQueueFamily;
-		m_commandBuffer = commandBuffer;
-		m_resources = &resources;
-		m_pipelines = &pipelines;
 	}
 	void CommandList::begin()
 	{

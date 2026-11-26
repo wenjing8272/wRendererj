@@ -4,8 +4,19 @@
 
 #include<cassert>
 #include<stdexcept>
+#include<iostream>
 
 namespace RHI {
+	ResourcesPool::ResourcesPool(VkDevice device, 
+								 VkCommandPool commandPool, 
+								 VkQueue graphicsQueue,
+								 VmaAllocator allocator,
+								 DeferedDeleter& deferedDeleter):
+	m_device(device),m_commandPool(commandPool),m_graphicsQueue(graphicsQueue),m_allocator(allocator),
+	m_deferedDeleter(&deferedDeleter)
+	{
+
+	}
 	ResourcesPool::~ResourcesPool()
 	{
 		for (auto& buffer : m_buffers)
@@ -13,15 +24,6 @@ namespace RHI {
 			if (buffer.alive)
 				vmaDestroyBuffer(m_allocator, buffer.buffer, buffer.allocation);
 		}
-	}
-	void ResourcesPool::init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator,
-		DeferedDeleter& deferedDeleter)
-	{
-		m_device = device;
-		m_commandPool = commandPool;
-		m_graphicsQueue = graphicsQueue;
-		m_allocator = allocator;
-		m_deferedDeleter = &deferedDeleter;
 	}
 
 	BufferHandle ResourcesPool::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -38,10 +40,12 @@ namespace RHI {
 		VmaAllocationCreateInfo allocationCreateInfo{};
 		if (properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		{
+			std::cout<<"device local index: "<<index<<'\n';
 			allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 		}
 		else
 		{
+			std::cout<<"host visible index: "<<index<<'\n';
 			allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 			allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		}

@@ -22,10 +22,12 @@ namespace RHI {
 	class ResourcesPool
 	{
 	public:
-		ResourcesPool() = default;
+		ResourcesPool(VkDevice device, 
+					  VkCommandPool commandPool, 
+					  VkQueue graphicsQueue,
+					  VmaAllocator allocator,
+					  DeferedDeleter& deferedDeleter);
 		~ResourcesPool();
-		void init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,VmaAllocator allocator,
-			DeferedDeleter& deferedDeleter);
 
 		BufferHandle createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 		ShaderHandle createShaderModule(const std::vector<char>& code);

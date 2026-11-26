@@ -6,13 +6,11 @@
 
 namespace RHI {
 
-	void FrameSync::initFrameSync(VkDevice device, VkQueue graphicsQueue)
+	FrameSync::FrameSync(VkDevice device,VkQueue graphicsQueue):m_device(device),m_graphicsQueue(graphicsQueue)
 	{
 		//See Device::Device
 		try
 		{
-			m_device = device;
-			m_graphicsQueue = graphicsQueue;
 			VkSemaphoreCreateInfo semaphoreInfo{};
 			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -67,6 +65,8 @@ namespace RHI {
 	std::optional<Frame> FrameSync::frameBegin(Swapchain& swapchain)
 	{
 		auto& slot = m_imageAvailableSemaphores[m_frameIndex];
+		// If this frame slot has been used before, wait on its in-flight
+		// fence before reusing it.
 		if (slot.retire)
 		{
 			if (!waitTimeline(slot.retire))
@@ -74,31 +74,39 @@ namespace RHI {
 				throw std::runtime_error("slot: retire timeout at");
 			}
 		}
+		// Acquire the next swapchain image, signaling the current frame's
+		// image-available semaphore.
+		// If the result is not VK_SUCCESS, the swapchain must be recreated:
+		// return std::nullopt immediately.
 		std::uint32_t imageIndex{ 0 };
 		if (swapchain.acquire(slot.acquied, imageIndex) != Swapchain::AcquireResult::Success)
 		{
 			return std::nullopt;
 		}
-		slot.retire = ++m_timeValue;
+		
 		return Frame{
 			.frameIndex = m_frameIndex,
 			.imageIndex = imageIndex,
-			.signalValue = m_timeValue,
+			.signalValue = ++m_timeValue,
 			.imageAvailable = slot.acquied,
 			.renderFinished = swapchain.renderFinished(imageIndex)
 		};
 	}
 	bool FrameSync::frameEnd(const Frame& frame, Swapchain& swapchain)
 	{
+		// Waiting on the image-available semaphore ensures the presentation engine has finished using the image.
 		VkSemaphoreSubmitInfo waitInfo{};
 		waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		waitInfo.semaphore = frame.imageAvailable;
 		waitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
+		// Submit the frame's command buffer.
 		VkCommandBufferSubmitInfo commandInfo{};
 		commandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		commandInfo.commandBuffer = frame.commandBuffer;
-
+		// Set up the signal infos: when rendering completes, signal the binary
+        // render-finished semaphore (unsignaled -> signaled) and signal the
+		// timeline semaphore with this frame's value to advance it.
 		VkSemaphoreSubmitInfo signalTimelineInfo{};
 		signalTimelineInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		signalTimelineInfo.semaphore = m_graphicsSemaphore;
@@ -120,10 +128,17 @@ namespace RHI {
 		submitInfo.signalSemaphoreInfoCount = static_cast<std::uint32_t>(submitInfos.size());
 		submitInfo.pSignalSemaphoreInfos = submitInfos.data();
 
-		vkQueueSubmit2(m_graphicsQueue,1, &submitInfo, VK_NULL_HANDLE);
+		// If vkQueueSubmit2 does not return VK_SUCCESS, the commands were never submitted to the GPU and none of the configured
+  		// signal operations will be executed. Simply return false and recreate the swapchain on the next frame.
 
+		if(vkQueueSubmit2(m_graphicsQueue,1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+		{
+			return false;
+		}
+		//Set retire value after submit success
+		m_imageAvailableSemaphores[m_frameIndex].retire = m_timeValue;
 		const bool presented = swapchain.present(frame.imageIndex,m_graphicsQueue);
-
+		
 		m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 
 		return presented;

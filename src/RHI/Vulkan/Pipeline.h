@@ -25,10 +25,8 @@ namespace RHI {
 	class Pipeline
 	{
 	public:
-		Pipeline() = default;
+		Pipeline(VkDevice device);
 		~Pipeline();
-
-		void init(VkDevice device);
 
 		ShaderHandle createShader(const std::vector<std::uint32_t>& shaderCode);
 		PipelineHandle createGraphicsPipeline(const GraphicsPipeline& graphicsPipeline,VkFormat format);

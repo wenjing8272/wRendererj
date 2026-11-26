@@ -15,13 +15,12 @@ namespace RHI {
 	class CommandList
 	{
 	public:
-		CommandList() = default;
+		CommandList(VkDevice device, std::uint32_t graphicsQueueFamily, VkCommandBuffer commandBuffer,
+					ResourcesPool& resources, Pipeline& pipelines);
 		CommandList(const CommandList& otherCommandList) = delete;
 		CommandList& operator=(const CommandList& otherCommandList) = delete;
 		CommandList(CommandList&& otherCommandList) = delete;
 		CommandList& operator=(CommandList&& otherCommandList) = delete;
-		void init(VkDevice device, std::uint32_t graphicsQueueFamily, VkCommandBuffer commandBuffer,
-			ResourcesPool& resources, Pipeline& pipelines);
 
 		void begin();
 		void beginRendering(VkImage image, VkImageView imageView, Area2D renderArea);

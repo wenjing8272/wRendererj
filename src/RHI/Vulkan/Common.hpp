@@ -36,6 +36,10 @@ namespace RHI {
 		template<>struct VkObjectStairts<VkSemaphore>{
 			static constexpr VkObjectType Value = VK_OBJECT_TYPE_SEMAPHORE;
 		};
+		template<>struct VkObjectStairts<VkCommandBuffer>
+		{
+			static constexpr VkObjectType Value = VK_OBJECT_TYPE_COMMAND_BUFFER;
+		};
 
 		//Init tool class 
 		static void init(VkDevice device)

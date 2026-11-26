@@ -5,7 +5,7 @@
 
 namespace RHI {
 
-	Swapchain::Swapchain(Device& device, std::optional<Extent2D> desiredExtent, VkSwapchainKHR old)
+	Swapchain::Swapchain(const Device& device, std::optional<Extent2D> desiredExtent, VkSwapchainKHR old)
 		: m_device(&device) {
 		//see Device::Device;
 		try {
@@ -108,6 +108,7 @@ namespace RHI {
 	// @param imageIndex  Index into the swapchain images.
 	// @param queue present queue
 	bool Swapchain::present(std::uint32_t imageIndex,VkQueue queue) const {
+		if(dirty)return false;
 		VkSemaphore renderFinished = m_renderFinished[imageIndex];
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

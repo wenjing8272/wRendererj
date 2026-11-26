@@ -22,7 +22,7 @@ namespace RHI {
 			OutOfDate
 		};
 
-		Swapchain(Device& device,
+		Swapchain(const Device& device,
 			std::optional<Extent2D> desiredExtent = std::nullopt,
 			VkSwapchainKHR old = VK_NULL_HANDLE);
 		~Swapchain();
@@ -31,6 +31,8 @@ namespace RHI {
 		Swapchain& operator=(const Swapchain&) = delete;
 		Swapchain(Swapchain&&) = delete;
 		Swapchain& operator=(Swapchain&&) = delete;
+
+		void setDirty(){dirty = true;}
 
 		VkSwapchainKHR get() const { return m_swapchain.swapchain; }
 		Extent2D extent() const { return { m_swapchain.extent.width, m_swapchain.extent.height }; }
@@ -48,7 +50,9 @@ namespace RHI {
 	private:
 		void destroy();
 
-		Device* m_device{ nullptr };
+		bool dirty {false};
+
+		const Device* m_device{ nullptr };
 		vkb::Swapchain m_swapchain;
 		std::vector<VkImage> m_images;
 		std::vector<VkImageView> m_views;

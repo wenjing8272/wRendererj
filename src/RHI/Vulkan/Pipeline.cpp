@@ -6,6 +6,9 @@
 #include<iostream>
 
 namespace RHI {
+	Pipeline::Pipeline(VkDevice device):m_device(device)
+	{
+	}
 	Pipeline::~Pipeline()
 	{
 		for (auto& shader : m_shaders)
@@ -20,10 +23,6 @@ namespace RHI {
 			vkDestroyPipeline(m_device, pipeline.pipeline, nullptr);
 			vkDestroyPipelineLayout(m_device, pipeline.pipelineLayout, nullptr);
 		}
-	}
-	void Pipeline::init(VkDevice device)
-	{
-		m_device = device;
 	}
 	ShaderHandle Pipeline::createShader(const std::vector<std::uint32_t>& shaderCode)
 	{

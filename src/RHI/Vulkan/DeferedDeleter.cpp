@@ -10,7 +10,6 @@ namespace RHI{
   {
     std::lock_guard<std::mutex> guard{m_mutex};
     m_deferedDeletions.push_back({waitValue,deleter});
-    LOG_INFO("push defered deletion resources"); 
   }
   void DeferedDeleter::deferedDeletion(VkDevice device,VkSemaphore semaphore)
   {

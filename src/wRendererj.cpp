@@ -129,11 +129,6 @@ int main()
 		assert(!vertices.empty() && "vertice must has value");
 
 		std::uint64_t size = sizeof(vertices[0]) * vertices.size();
-		auto stagingBufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferSrc, RHI::MemoryProperty::HostVisible);
-		renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
-		auto bufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
-		renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
-		renderContext.destoryBuffer(stagingBufferHandle);
 		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
 
     printSpvReflectResult(shaderCode);
@@ -181,6 +176,11 @@ int main()
 				renderContext.recreateSwapchain({ framebufferSize.width, framebufferSize.height });
 				swapchainDirty = false;
 			}
+			auto stagingBufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferSrc, RHI::MemoryProperty::HostVisible);
+			renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
+			auto bufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
+			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle,size);
+			renderContext.destoryBuffer(stagingBufferHandle);
 			auto frame = renderContext.begin();
 			if (!frame)
 			{
@@ -194,6 +194,7 @@ int main()
 			frame->commandList->bindVertexBuffer(bufferHandle);
 			frame->commandList->draw();
 			frame->commandList->endRendering(frame->image);
+			renderContext.destoryBuffer(bufferHandle);
 			if (!renderContext.end(*frame))swapchainDirty = true;
 		}
 	}

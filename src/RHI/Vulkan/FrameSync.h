@@ -11,13 +11,12 @@ namespace RHI {
 
 	class FrameSync {
 	public:
-		FrameSync() = default;
+		FrameSync(VkDevice device,VkQueue graphicsQueue);
 		~FrameSync();
 		FrameSync(const FrameSync& otherFrameSync) = delete;
 		FrameSync& operator=(const FrameSync& otherFrameSync) = delete;
 		FrameSync(FrameSync&& otherFrameSync) = delete;
 		FrameSync& operator=(FrameSync&& otherFrameSync) = delete;
-		void initFrameSync(VkDevice device,VkQueue graphicsQueue);
 		std::optional<Frame> frameBegin(Swapchain& swapchain);
 		bool frameEnd(const Frame& frame, Swapchain& swapchain);
 
