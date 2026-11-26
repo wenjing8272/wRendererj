@@ -19,6 +19,11 @@ find_package(Vulkan REQUIRED)
 add_subdirectory(external/vk-bootstrap)
 add_subdirectory(external/glm)
 
+set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/SPIRV-Reflect)
+
 add_library(vma STATIC external/VMA/vk_mem_alloc.cpp)
 
 target_include_directories(vma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external)
@@ -42,15 +47,17 @@ add_subdirectory(src/RHI)
 
 # 创建自己的目标
 add_executable(${PROJECT_NAME}
-    src/wRendererj.cpp
+    main.cpp
     src/Window/WindowManger.cpp
-    src/Asset/Test.h
+    Asset/Test.h
+    Scene/SceneManager.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     RHI
     glfw
     glm::glm
+    spirv-reflect-static
 )
 
 # 编译着色器,输出到构建目录根下

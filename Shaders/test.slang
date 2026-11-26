@@ -22,5 +22,5 @@ VSOutput mainVert(VSInput input)
 [shader("fragment")]
 float4 mainFrag(VSOutput inFrag):SV_Target
 {
-	return inFrag.color;
+	return inFrag.color + inFrag.svPosition;
 }
