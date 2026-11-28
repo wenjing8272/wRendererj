@@ -4,8 +4,8 @@
 #include"RHI/Types.h"
 #include"RHI/Vulkan/RenderContext.h"
 #include"RHI/Vulkan/CommandList.h"
-#include"Asset/Test.h"
 #include<spirv_reflect.h>
+#include<SceneManager.h>
 
 #include <iostream>
 #include<filesystem>
@@ -13,6 +13,7 @@
 #include<vector>
 #include<string>
 #include<unordered_map>
+#include<thread>
 
 std::vector<std::uint32_t> readFile(std::filesystem::path shaderPath)
 {
@@ -153,6 +154,8 @@ void printShaderReflect(const void* data, std::size_t dataSize)
 int main()
 {
 	try {
+		Scene::SceneManager manager{};
+		manager.loadglTF("Asset/DamagedHelmet/DamagedHelmet.gltf");
 		bool swapchainDirty = false;
 		wrj::WindowManger windowManger(1920, 1080);
 		RHI::RenderContext renderContext;
@@ -165,20 +168,15 @@ int main()
 		initRes.appName = " wRenderj";
 		renderContext.initRenderContext(initRes, windowManger.getRequiredInstanceExtensions());
 
-		auto vertices = wrj::getVertices();
-
-		assert(!vertices.empty() && "vertice must has value");
-
-		std::uint64_t size = sizeof(vertices[0]) * vertices.size();
 		auto shaderCode = readFile("Shaders/compileShaders/test_shader.spv");
 
 		//printSpvReflectResult(shaderCode);
 
-		printShaderReflect(shaderCode.data(), shaderCode.size() * sizeof(std::uint32_t));
+		//printShaderReflect(shaderCode.data(), shaderCode.size() * sizeof(std::uint32_t));
 
 		auto testShaderHandle = renderContext.createShader(shaderCode);
 
-		auto vertexAttribute = wrj::Vertex::vertexAttribute();
+		auto vertexAttribute = manager.getVertexAttribute();
 		std::vector<RHI::DynamicState> dynamics = { RHI::DynamicState::Viewport,RHI::DynamicState::Scissor };
 
 		RHI::GraphicsPipeline test{
@@ -186,10 +184,11 @@ int main()
 			.fragmentShader = testShaderHandle,
 			.vertexName = "mainVert",
 			.fragmentName = "mainFrag",
-			.vertexBinding = wrj::Vertex::vertexBinding(),
+			.vertexBinding = manager.getVertexBinding(),
 			.vertexAttribute = vertexAttribute,
 			.pushConstantRange = {.offset = 0,.size = 0},
 			.primitiveTopology = RHI::PrimitiveTopology::TriangleList,
+			.rasterizer = {.polygonMode = RHI::PolygonMode::Fill,.cullMode = RHI::CullMode::None,.frontFace = RHI::FrontFace::Clockwise},
 			.depthBaisEnable = false,
 			.sampleCount = RHI::SampleCount::e1,
 			.blendEnable = false,
@@ -219,11 +218,17 @@ int main()
 				renderContext.recreateSwapchain({ framebufferSize.width, framebufferSize.height });
 				swapchainDirty = false;
 			}
-			auto stagingBufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferSrc, RHI::MemoryProperty::HostVisible);
-			renderContext.copyBuffer(stagingBufferHandle, vertices.data(), size);
-			auto bufferHandle = renderContext.createBuffer(size, RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
-			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle, size);
+			auto stagingBufferHandle = renderContext.createBuffer(manager.getVertexSize(), RHI::BufferUsage::TransferSrc, RHI::MemoryProperty::HostVisible);
+            auto stagingIndexBufferHandle = renderContext.createBuffer(manager.getIndexSize(),RHI::BufferUsage::TransferSrc,RHI::MemoryProperty::HostVisible);
+			renderContext.copyBuffer(stagingBufferHandle, manager.getVertexData(), manager.getVertexSize());
+            renderContext.copyBuffer(stagingIndexBufferHandle,manager.getIndexData(),manager.getIndexSize());
+
+			auto bufferHandle = renderContext.createBuffer(manager.getVertexSize(), RHI::BufferUsage::TransferDst | RHI::BufferUsage::VertexBuffer, RHI::MemoryProperty::DeviceLocal);
+            auto indexBufferHandle = renderContext.createBuffer(manager.getIndexSize(),RHI::BufferUsage::IndexBuffer | RHI::BufferUsage::TransferDst,RHI::MemoryProperty::DeviceLocal);
+			renderContext.uploadBuffer(stagingBufferHandle, bufferHandle, manager.getVertexSize());
+            renderContext.uploadBuffer(stagingIndexBufferHandle,indexBufferHandle,manager.getIndexSize());
 			renderContext.destoryBuffer(stagingBufferHandle);
+            renderContext.destoryBuffer(stagingIndexBufferHandle);
 			auto frame = renderContext.begin();
 			if (!frame)
 			{
@@ -235,7 +240,15 @@ int main()
 			frame->commandList->setViewport({ .x = 0.0f,.y = 0.0f,.width = static_cast<float>(frame->area.extent.width),.height = static_cast<float>(frame->area.extent.height),.minDepth = 0.0f,.maxDepth = 1.0f });
 			frame->commandList->setScissor({ .offset = {0,0},.extent = frame->area.extent });
 			frame->commandList->bindVertexBuffer(bufferHandle);
-			frame->commandList->draw();
+			frame->commandList->bindIndexBuffer(indexBufferHandle);
+			const auto& meshes = manager.getMesh();
+			for (const auto& m : meshes)
+			{
+				for (const auto& sub : m.submeshes)
+				{
+					frame->commandList->drawIndex(sub.indexCount, 1, sub.firstIndex,0,0);
+				}
+			}
 			frame->commandList->endRendering(frame->image);
 			renderContext.destoryBuffer(bufferHandle);
 			if (!renderContext.end(*frame))swapchainDirty = true;

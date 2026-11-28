@@ -1,26 +1,30 @@
 struct VSInput
 {
-	[[vk::location(0)]]float4 inPosition;
-	[[vk::location(1)]]float4 inColor;
+	[[vk::location(0)]]float3 inPosition;
+	[[vk::location(1)]]float3 inNormal;
+	[[vk::location(2)]]float2 inUV;
 }
 
 struct VSOutput
 {
-	float4 svPosition:SV_Position;
-	float4 color;
+	float3 position;
+	float3 normal;
+	float2 uv;
 }
 
 [shader("vertex")]
 VSOutput mainVert(VSInput input)
 {
 	VSOutput output;
-	output.svPosition = input.inPosition;
-	output.color = input.inColor;
+	output.position = input.inPosition,1.0f;
+	output.normal = input.inNormal,1.0f;
+	output.uv = input.inUV;
 	return output;
 }
 
 [shader("fragment")]
 float4 mainFrag(VSOutput inFrag):SV_Target
 {
-	return inFrag.color + inFrag.svPosition;
+	float3 n = inFrag.normal;
+	return float4(0.5 * n + 0.5,1.0);
 }

@@ -1,6 +1,6 @@
 #include"Pipeline.h"
-
 #include"Common.hpp"
+#include<spirv_reflect.h>
 
 #include<stdexcept>
 #include<iostream>
@@ -96,6 +96,7 @@ namespace RHI {
 		{
 			if (!i.isVaild())throw std::runtime_error("vertex attribute no vaild");
 			auto& attributeDescription = attributeDescriptions.emplace_back();
+			std::cout << "location: " << i.location << '\n';
 			attributeDescription.binding = i.binding;
 			attributeDescription.location = i.location;
 			attributeDescription.offset = i.offset;

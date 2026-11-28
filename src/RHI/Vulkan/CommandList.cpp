@@ -28,7 +28,7 @@ namespace RHI {
 						 VK_ACCESS_NONE, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						 VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT });
 
-		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+		VkClearValue clearColor = { 0.529f, 0.808f, 0.922f, 1.0f };
 
 		VkRenderingAttachmentInfo colorAttachment{};
 		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -76,11 +76,25 @@ namespace RHI {
 		}
 		VkBuffer buffer = m_resources->getBuffer(bufferHandle);
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &buffer, &offset);
+		vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, &buffer,&offset);
 	}
-	void CommandList::draw()
+	void CommandList::bindIndexBuffer(BufferHandle bufferHandle)
 	{
-		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+		if (!m_resources->isBufferVaild(bufferHandle))
+		{
+			throw std::runtime_error("index buffer no vaild");
+		}
+		VkBuffer buffer = m_resources->getBuffer(bufferHandle);
+		VkDeviceSize offset = 0;
+		vkCmdBindIndexBuffer(m_commandBuffer, buffer, offset, VK_INDEX_TYPE_UINT32);
+	}
+	void CommandList::draw(std::uint32_t vertexCount,std::uint32_t instanceCount,std::uint32_t firstVertex,std::uint32_t firstInstance)
+	{
+		vkCmdDraw(m_commandBuffer, vertexCount,instanceCount,firstVertex,firstInstance);
+	}
+	void CommandList::drawIndex(std::uint32_t indexCount,std::uint32_t instanceCount,std::uint32_t firstIndex,std::uint32_t vertexOffset,std::uint32_t firstInstance)
+	{
+		vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 	void CommandList::endRendering(VkImage image)
 	{

@@ -1,11 +1,5 @@
-project("RHI")
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 # RHI 是模块库，由顶层 CMakeLists.txt 里的主程序链接
-add_library(${PROJECT_NAME} STATIC
+add_library(RHI STATIC
     Vulkan/Device.cpp
     Vulkan/Swapchain.cpp
     Vulkan/RenderContext.cpp
@@ -19,9 +13,10 @@ add_library(${PROJECT_NAME} STATIC
     Vulkan/DeferedDeleter.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_include_directories(RHI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(RHI PUBLIC
     Vulkan::Vulkan
     vk-bootstrap::vk-bootstrap
     vma
+    spirv-reflect-static
 )

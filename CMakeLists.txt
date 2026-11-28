@@ -25,10 +25,8 @@ set(SPIRV_REFLECT_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SPIRV-Reflect)
 
 add_library(vma STATIC external/VMA/vk_mem_alloc.cpp)
-
-target_include_directories(vma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external)
+target_include_directories(vma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/vma)
 target_link_libraries(vma PUBLIC Vulkan::Vulkan)
-
 
 add_library(glfw STATIC IMPORTED)
 set_target_properties(glfw PROPERTIES
@@ -36,28 +34,28 @@ set_target_properties(glfw PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/external/GLFW/glfw-3.5.1.bin.WIN64/include
 )
 
-# 源文件是 UTF-8（无 BOM）且使用 LF 换行。MSVC 默认按系统代码页（中文系统为 GBK）
-# 解析源文件，中文注释的尾字节可能被当作双字节字符的首字节并吞掉换行，
+# 源文件是 UTF-8且使用 LF 换行,MSVC 默认按系统代码页（中文系统为 GBK）
 if (MSVC)
     add_compile_options(/utf-8)
 endif()
 
 # 先构建 RHI 模块,主程序链接它
-add_subdirectory(src/RHI)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Scene)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/RHI)
 
 # 创建自己的目标
 add_executable(${PROJECT_NAME}
     main.cpp
     src/Window/WindowManger.cpp
-    Asset/Test.h
-    Scene/SceneManager.cpp
 )
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/Scene
+)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     RHI
+    Scene
     glfw
-    glm::glm
-    spirv-reflect-static
 )
 
 # 编译着色器,输出到构建目录根下
@@ -104,3 +102,17 @@ compile_shader(tt_shader_compile tt_shader.spv
                sources ${tt_shader}
                entry vertMain)
 add_dependencies(${PROJECT_NAME} test_shader_compile tt_shader_compile)
+
+# 将KTX的链接库，拷贝到.exe文件所在目录，在调用KTX的函数时，如果做在目录没有他的链接库，就会报错
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:ktx>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)
+
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/Asset
+            $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/Asset
+    COMMENT "copy asset directory"
+)

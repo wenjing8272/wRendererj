@@ -49,6 +49,10 @@ namespace RHI {
 			return VK_FORMAT_D32_SFLOAT;
 		case Format::Undefined:
 			return VK_FORMAT_UNDEFINED;
+        case Format::R32G32_SFloat:
+            return VK_FORMAT_R32G32_SFLOAT;
+        case Format::R32G32B32_SFloat:
+            return VK_FORMAT_R32G32B32_SFLOAT;
 		default:
 			LOG_WARN("format choose default format: r8g8b8a8srgb");
 			return VK_FORMAT_R8G8B8A8_SRGB;
@@ -90,6 +94,8 @@ namespace RHI {
 			return VK_CULL_MODE_FRONT_BIT;
 		case CullMode::Back:
 			return VK_CULL_MODE_BACK_BIT;
+		case CullMode::None:
+			return VK_CULL_MODE_NONE;
 		default:
 			LOG_WARN("cull mode default use: back");
 			return VK_CULL_MODE_BACK_BIT;

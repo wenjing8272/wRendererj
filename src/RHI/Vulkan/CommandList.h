@@ -28,7 +28,9 @@ namespace RHI {
 		void setViewport(Viewport viewport);
 		void setScissor(Area2D area);
 		void bindVertexBuffer(BufferHandle bufferHandle);
-		void draw();
+		void bindIndexBuffer(BufferHandle bufferHandle);
+		void draw(std::uint32_t vertexCount, std::uint32_t instanceCount, std::uint32_t firstVertex, std::uint32_t firstInstance);
+		void drawIndex(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance);
 		void endRendering(VkImage image);
 		VkCommandBuffer end();
 	private:

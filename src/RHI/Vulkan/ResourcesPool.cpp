@@ -40,12 +40,10 @@ namespace RHI {
 		VmaAllocationCreateInfo allocationCreateInfo{};
 		if (properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 		{
-			std::cout<<"device local index: "<<index<<'\n';
 			allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 		}
 		else
 		{
-			std::cout<<"host visible index: "<<index<<'\n';
 			allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 			allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		}

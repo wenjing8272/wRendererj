@@ -56,6 +56,8 @@ namespace RHI {
 		R8G8B8A8_SRGB,
 		B8G8R8A8_UNorm,
 		B8G8R8A8_SRGB,
+        R32G32_SFloat,
+        R32G32B32_SFloat,
 		R16G16B16A16_SFloat,
 		R32G32B32A32_SFloat,
 		R8G8_UNorm,
@@ -190,6 +192,10 @@ namespace RHI {
 			return stage != ShaderStage::None && offset != vaildValue && size != vaildValue;
 		}
 	};
+	enum class IndexType {
+		U32,
+		U16
+	};
 
 	enum class PrimitiveTopology
 	{
@@ -208,7 +214,8 @@ namespace RHI {
 	enum class CullMode
 	{
 		Front,
-		Back
+		Back,
+		None
 	};
 
 	enum class FrontFace
